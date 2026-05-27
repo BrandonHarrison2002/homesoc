@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# SQLite databases (data, not code — never commit)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and evidence (may contain MACs, IPs, hostnames)
+evidence/alerts/
+evidence/logs/
+*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Secrets — never commit
+.env
+secrets.yaml
