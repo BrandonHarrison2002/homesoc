@@ -1,0 +1,12 @@
+[Unit]
+Description=Run HomeSOC discovery every 15 minutes
+Documentation=https://github.com/BrandonHarrison2002/homesoc
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Unit=homesoc-discovery.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
