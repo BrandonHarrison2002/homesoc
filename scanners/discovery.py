@@ -29,7 +29,7 @@ from pathlib import Path
 
 # Constants
 SELF_MAC = "b8:27:eb:f0:9d:06"
-SELF_OWNER = "HomeSOC Raspberry Pi"
+SELF_OWNER = "Brandon"
 SELF_VENDOR = "Raspberry Pi Foundation"
 SELF_DEVICE_TYPE = "server"
 
