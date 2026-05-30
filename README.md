@@ -9,13 +9,17 @@ documentation and runbooks.
 
 ## Status
 
-🚧 In active development. See `docs/` for the project plan and roadmap.
+In active development. See `docs/` for the project plan and roadmap.
 
 ## Hardware
 
 - Raspberry Pi 3 Model B v1.2 (Raspberry Pi OS)
 - GL.iNet Flint 2 router
 - Home LAN: 192.168.8.0/24
+
+## Network topology
+
+![Home network](docs/network-diagram.png)
 
 ## Project structure
 
