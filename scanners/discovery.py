@@ -23,12 +23,14 @@ import sqlite3
 import subprocess
 import sys
 import time
+import socket
 from datetime import datetime, timezone
 from pathlib import Path
 
 # Constants
 SELF_MAC = "b8:27:eb:f0:9d:06"
 SELF_OWNER = "HomeSOC Raspberry Pi"
+SELF_VENDOR = "Raspberry Pi Foundation"
 SELF_DEVICE_TYPE = "server"
 
 # regular expression module for parsing arp-scan output.
@@ -44,6 +46,25 @@ ROW_RE = re.compile(
 def get_time() -> str:
     """Return current UTC time as ISO-8601 string (matches schema convention)."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_self_device() -> dict:
+    """
+    Return a device dict for this Pi, matching the shape from parse_arp_scan:{"ip": ..., "mac": ..., "vendor": ...}
+    """
+    return {
+        "ip": get_local_ip(),
+        "mac": SELF_MAC,
+        "vendor": SELF_VENDOR,
+    }
+
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip = s.getsockname()[0]
+    s.close()
+    return ip
 
 
 def run_arp_scan(interface: str) -> tuple[str, int]:
@@ -214,6 +235,7 @@ def main() -> int:
         return 1
 
     devices = parse_arp_scan(output)
+    devices.insert(0, get_self_device()) # adds pi to the list of devices 
     finished_at = get_time()
 
     conn = sqlite3.connect(db_path)
@@ -257,3 +279,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
