@@ -41,6 +41,14 @@ ROW_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Colors
+USE_COLOR = sys.stdout.isatty()
+
+RED    = "\033[91m" if USE_COLOR else ""
+YELLOW = "\033[93m" if USE_COLOR else ""
+GREEN  = "\033[92m" if USE_COLOR else ""
+BOLD   = "\033[1m"  if USE_COLOR else ""
+RESET  = "\033[0m"  if USE_COLOR else ""
 
 # Tools
 def get_time() -> str:
@@ -265,9 +273,9 @@ def main() -> int:
 
     if new_assets:
         print("")
-        print(f"!! {len(new_assets)} NEW asset(s) detected (review required):")
+        print(f"!!{RED}{BOLD}!! {len(new_assets)} NEW asset(s) detected (review required):{RESET}")
         for d in new_assets:
-            print(f"   - {d['mac']}  {d['ip']}  {d['vendor']}")
+            print(f"   - {YELLOW}{d['mac']}{RESET}  {d['ip']}  {d['vendor']}")
         print("")
         print(
             "   To approve: UPDATE assets SET is_known=1, owner='...', "
