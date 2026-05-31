@@ -19,7 +19,7 @@ on the network.
 | bc:fc:e7:75:e4:bb | 192.168.8.119 | HACKER-MAN-2 | desktop | main working pc |
 | 94:e7:0b:03:f8:86 | 192.168.8.191 | shaddy-GE66-Raider-10SFS | laptop | backup computer |
 | 02:08:60:1d:09:1f | 192.168.8.171 | iPhone | phone | using MAC randomization. |
-
+| b2:e3:fb:d1:4c:c8 | 192.168.8.223 | Brandon | phone | Spare phone using MAC randomization. Identified via RB-001 investigation 2026-05-30. |
 ---
 
 ## Review process
@@ -38,3 +38,4 @@ When a new device appears in the asset inventory with `is_known=0`:
 | Date | Change |
 |---|---|
 | 2026-05-30 | Initial asset register created |
+| 2026-05-30 | RB-001 invocation: triaged unknown device 
