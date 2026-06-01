@@ -20,6 +20,8 @@ on the network.
 | 94:e7:0b:03:f8:86 | 192.168.8.191 | shaddy-GE66-Raider-10SFS | laptop | backup computer |
 | 02:08:60:1d:09:1f | 192.168.8.171 | iPhone | phone | using MAC randomization. |
 | b2:e3:fb:d1:4c:c8 | 192.168.8.223 | Brandon | phone | Spare phone using MAC randomization. Identified via RB-001 investigation 2026-05-30. |
+| 5c:e7:53:xx:xx:xx (x7) | various .130–.220 | Brandon | iot | 7 smart bulbs same brand. |
+| 36:cf:bc:cb:16:29 | 192.168.8.220 | Brandon | phone | iPhone with MAC randomization. Identified by household context. |
 ---
 
 ## Review process
@@ -39,3 +41,4 @@ When a new device appears in the asset inventory with `is_known=0`:
 |---|---|
 | 2026-05-30 | Initial asset register created |
 | 2026-05-30 | RB-001 invocation: triaged unknown device 
+| 2026-06-01 | RB-001 batch invocation: identified and approved 7 smart bulbs (5c:e7:53 series) and 1 iPhone (36:cf:bc randomized MAC). All set is_known=1.|
