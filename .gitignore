@@ -25,3 +25,6 @@ Thumbs.db
 # Secrets — never commit
 .env
 secrets.yaml
+
+# watcher runtime state
+alerts/.watcher_state.json

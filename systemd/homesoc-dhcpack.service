@@ -1,0 +1,18 @@
+[Unit]
+Description=HomeSOC DHCPACK watcher (parse Flint syslog for unknown MACs)
+Documentation=https://github.com/BrandonHarrison2002/homesoc
+After=network-online.target rsyslog.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/home/brandon/homesoc
+ExecStart=/usr/bin/python3 /home/brandon/homesoc/alerts/dhcpack_watcher.py
+Nice=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homesoc-dhcpack
+
+[Install]
+WantedBy=multi-user.target

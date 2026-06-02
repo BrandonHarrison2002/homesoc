@@ -1,0 +1,12 @@
+[Unit]
+Description=Run HomeSOC DHCPACK watcher every 5 minutes
+Documentation=https://github.com/BrandonHarrison2002/homesoc
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Unit=homesoc-dhcpack.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
