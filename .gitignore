@@ -28,3 +28,7 @@ secrets.yaml
 
 # watcher runtime state
 alerts/.watcher_state.json
+
+# raw scan output
+evidence/scans/
+
