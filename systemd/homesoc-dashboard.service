@@ -1,0 +1,20 @@
+[Unit]
+Description=HomeSOC dashboard (Flask, read-only LAN web UI)
+Documentation=https://github.com/BrandonHarrison2002/homesoc
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=brandon
+WorkingDirectory=/home/brandon/homesoc
+ExecStart=/home/brandon/homesoc/.venv/bin/python /home/brandon/homesoc/dashboard/app.py
+Restart=on-failure
+RestartSec=5
+Nice=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homesoc-dashboard
+
+[Install]
+WantedBy=multi-user.target
