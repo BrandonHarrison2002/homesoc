@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HomeSOC — Summary</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            padding: 2rem 2.5rem;
+            background: #0f1115;
+            color: #e6e6e6;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: -0.01em;
+        }
+
+        .tagline { font-size: 0.8rem; color: #555b66; }
+
+        nav {
+            margin: 0.75rem 0 2rem;
+            display: flex;
+            border-bottom: 1px solid #1e2229;
+        }
+
+        nav a {
+            color: #9aa0aa;
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.9rem 0.5rem;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+
+        nav a:hover { color: #e6e6e6; }
+        nav a.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
+        section { margin-bottom: 2.5rem; }
+
+        h2 {
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: #555b66;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 0 0 0.9rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            background: #141720;
+            border: 1px solid #21252e;
+            border-radius: 8px;
+            padding: 0.65rem 1.1rem;
+            min-width: 100px;
+        }
+
+        .stat .num {
+            font-size: 1.6rem;
+            font-weight: 600;
+            line-height: 1.1;
+        }
+
+        .stat .label {
+            font-size: 0.72rem;
+            color: #555b66;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 2px;
+        }
+
+        .scan-meta {
+            font-size: 0.8rem;
+            color: #444b57;
+            margin-top: 0.75rem;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.875rem;
+        }
+
+        th {
+            color: #555b66;
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.06em;
+            padding: 0 0.75rem 0.6rem;
+            text-align: left;
+            border-bottom: 1px solid #1e2229;
+        }
+
+        td {
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid #181b22;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #141720; }
+
+        .muted { color: #444b57; }
+
+        .empty {
+            font-size: 0.85rem;
+            color: #3a3e48;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>HomeSOC</h1>
+        <span class="tagline">summary</span>
+    </header>
+
+    <nav>
+        <a href="/">Devices</a>
+        <a href="/alerts">Alerts</a>
+        <a href="/summary" class="active">Summary</a>
+    </nav>
+
+    <section>
+        <h2>Scans — last 24h</h2>
+        <div class="stats">
+            <div class="stat">
+                <div class="num">{{ s.scan_count }}</div>
+                <div class="label">Scans</div>
+            </div>
+            <div class="stat">
+                <div class="num">{{ s.scan_avg_ms if s.scan_avg_ms else '—' }}</div>
+                <div class="label">Avg ms</div>
+            </div>
+        </div>
+        <p class="scan-meta">Most recent: {{ s.scan_latest }} UTC</p>
+    </section>
+
+    <section>
+        <h2>Asset snapshot</h2>
+        <div class="stats">
+            <div class="stat">
+                <div class="num">{{ s.total }}</div>
+                <div class="label">Total</div>
+            </div>
+            <div class="stat">
+                <div class="num">{{ s.online }}</div>
+                <div class="label">Online &lt;{{ window }}m</div>
+            </div>
+            <div class="stat">
+                <div class="num">{{ s.unreviewed }}</div>
+                <div class="label">Unreviewed</div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Not seen in 24h</h2>
+        {% if s.stale %}
+        <table>
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>MAC</th>
+                    <th>Hostname</th>
+                    <th>Last seen (UTC)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in s.stale %}
+                <tr>
+                    <td>{{ d['ip'] }}</td>
+                    <td class="muted">{{ d['mac'] }}</td>
+                    <td>{{ d['hostname'] }}</td>
+                    <td class="muted">{{ d['last_seen'] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty">All known devices have checked in within the last 24h.</p>
+        {% endif %}
+    </section>
+
+</body>
+</html>

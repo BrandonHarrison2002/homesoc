@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HomeSOC — Alerts</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            padding: 2rem 2.5rem;
+            background: #0f1115;
+            color: #e6e6e6;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: -0.01em;
+        }
+
+        .tagline { font-size: 0.8rem; color: #555b66; }
+
+        nav {
+            margin: 0.75rem 0 2rem;
+            display: flex;
+            border-bottom: 1px solid #1e2229;
+        }
+
+        nav a {
+            color: #9aa0aa;
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.9rem 0.5rem;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+
+        nav a:hover { color: #e6e6e6; }
+        nav a.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat {
+            background: #141720;
+            border: 1px solid #21252e;
+            border-radius: 8px;
+            padding: 0.65rem 1.1rem;
+        }
+
+        .stat .num {
+            font-size: 1.6rem;
+            font-weight: 600;
+            line-height: 1.1;
+        }
+
+        .stat .label {
+            font-size: 0.72rem;
+            color: #555b66;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 2px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.875rem;
+        }
+
+        th {
+            color: #555b66;
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.06em;
+            padding: 0 0.75rem 0.6rem;
+            text-align: left;
+            border-bottom: 1px solid #1e2229;
+        }
+
+        td {
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid #181b22;
+            vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #141720; }
+
+        .muted { color: #444b57; }
+
+        .status-open   { color: #e05252; font-weight: 500; }
+        .status-resolved { color: #3fb950; }
+
+        .sev-low    { color: #9aa0aa; }
+        .sev-medium { color: #d29922; }
+        .sev-high   { color: #e05252; font-weight: 600; }
+
+        .empty {
+            margin-top: 3rem;
+            color: #3a3e48;
+            font-size: 0.9rem;
+        }
+
+        .empty strong { color: #555b66; }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>HomeSOC</h1>
+        <span class="tagline">alerts</span>
+    </header>
+
+    <nav>
+        <a href="/">Devices</a>
+        <a href="/alerts" class="active">Alerts</a>
+        <a href="/summary">Summary</a>
+    </nav>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="num">{{ total }}</div>
+            <div class="label">Total tickets</div>
+        </div>
+        <div class="stat">
+            <div class="num {% if open_count > 0 %}status-open{% endif %}">{{ open_count }}</div>
+            <div class="label">Open</div>
+        </div>
+    </div>
+
+    {% if alerts %}
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Sev</th>
+                <th>Detected (UTC)</th>
+                <th>Rule / detector</th>
+                <th>IP</th>
+                <th>MAC</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in alerts %}
+            <tr>
+                <td class="status-{{ a.get('status', 'unknown') }}">{{ a.get('status', '—') }}</td>
+                <td class="sev-{{ a.get('severity', 'low') }}">{{ a.get('severity', '—') }}</td>
+                <td class="muted">{{ a.get('detected_at', '—') }}</td>
+                <td>{{ a.get('detected_by', '—') }}</td>
+                <td>{{ a.get('asset_ip', '—') }}</td>
+                <td class="muted">{{ a.get('asset_mac', '—') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty"><strong>No open alerts.</strong> Tickets are written to evidence/alerts/ as .md files when a rule fires.</p>
+    {% endif %}
+
+</body>
+</html>
