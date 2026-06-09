@@ -32,3 +32,4 @@ alerts/.watcher_state.json
 # raw scan output
 evidence/scans/
 
+alerts/.ssh_watcher_state.json
