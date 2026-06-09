@@ -1,0 +1,17 @@
+[Unit]
+Description=HomeSOC SSH brute-force watcher
+Documentation=https://github.com/BrandonHarrison2002/homesoc
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/home/brandon/homesoc
+ExecStart=/usr/bin/python3 /home/brandon/homesoc/alerts/ssh_bruteforce_watcher.py
+Nice=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homesoc-sshbrute
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Run HomeSOC SSH brute-force watcher every 5 minutes
+Documentation=https://github.com/BrandonHarrison2002/homesoc
+
+[Timer]
+OnBootSec=4min
+OnUnitActiveSec=5min
+Unit=homesoc-sshbrute.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
