@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""HomeSOC dashboard — device inventory, alerts, summary, heartbeat API."""
+"""HomeSOC dashboard — device inventory, alerts, summary."""
 
 import sqlite3
-from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template
 
 app = Flask(__name__)
 
@@ -15,8 +14,6 @@ ALERTS_DIR = PROJECT_ROOT / "evidence" / "alerts"
 
 # anything last seen within this window is considered "online"
 ONLINE_WINDOW_MIN = 30
-# heartbeat devices ping frequently, so a tighter window than arp-scan
-HEARTBEAT_WINDOW_MIN = 10
 
 # data access
 def get_devices():
@@ -47,51 +44,6 @@ def get_devices():
     finally:
         conn.close()
 
-
-def record_heartbeat(device_id, ip):
-    """Insert or update a device's last-seen heartbeat timestamp (UTC)."""
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        conn.execute(
-            """
-            INSERT INTO heartbeats (device_id, last_seen, ip)
-            VALUES (?, ?, ?)
-            ON CONFLICT(device_id) DO UPDATE SET
-                last_seen = excluded.last_seen,
-                ip        = excluded.ip
-            """,
-            (device_id, now, ip),
-        )
-        conn.commit()
-    finally:
-        conn.close()
-    return now
-
-def get_heartbeats():
-    """Return heartbeat devices with computed online/offline status."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        return conn.execute(
-            """
-            SELECT
-                device_id,
-                last_seen,
-                COALESCE(ip, '-')   AS ip,
-                COALESCE(note, '')  AS note,
-                CASE
-                    WHEN last_seen > datetime('now', ?)
-                    THEN 'online'
-                    ELSE 'offline'
-                END AS status
-            FROM heartbeats
-            ORDER BY device_id
-            """,
-            (f"-{HEARTBEAT_WINDOW_MIN} minutes",),
-        ).fetchall()
-    finally:
-        conn.close()
 
 def parse_frontmatter(text: str) -> dict:
     """Pull key: value pairs out of a --- fenced YAML header."""
@@ -180,8 +132,8 @@ def home():
         online=sum(1 for d in devices if d["status"] == "online"),
         unreviewed=sum(1 for d in devices if d["is_known"] == 0),
         window=ONLINE_WINDOW_MIN,
-	active="devices",    
-)
+        active="devices",
+    )
 
 
 @app.route("/alerts")
@@ -193,42 +145,13 @@ def alerts():
         alerts=all_alerts,
         total=len(all_alerts),
         open_count=open_count,
-	active="alerts",    
-)
+        active="alerts",
+    )
 
 
 @app.route("/summary")
 def summary():
-	return render_template("summary.html", s=get_summary(), window=ONLINE_WINDOW_MIN, active="summary")
-
-@app.route("/heartbeats")
-def heartbeats_view():
-    hb = get_heartbeats()
-    online = sum(1 for h in hb if h["status"] == "online")
-    return render_template(
-        "heartbeats.html",
-        heartbeats=hb,
-        total=len(hb),
-        online=online,
-        window=HEARTBEAT_WINDOW_MIN,
- 	active="heartbeats",
-)
-
-@app.route("/api/heartbeat", methods=["POST"])
-def heartbeat():
-    """Receive a heartbeat ping. Expects JSON: {"device_id": "esp32-01"}."""
-    data = request.get_json(silent=True) or {}
-    device_id = data.get("device_id")
-    if not device_id:
-        return jsonify({"error": "device_id required"}), 400
-    source_ip = request.remote_addr
-    seen_at = record_heartbeat(device_id, source_ip)
-    return jsonify({
-        "status": "ok",
-        "device_id": device_id,
-        "last_seen": seen_at,
-        "ip": source_ip,
-    })
+    return render_template("summary.html", s=get_summary(), window=ONLINE_WINDOW_MIN, active="summary")
 
 
 if __name__ == "__main__":

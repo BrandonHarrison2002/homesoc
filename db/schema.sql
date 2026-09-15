@@ -60,10 +60,3 @@ CREATE TABLE IF NOT EXISTS sightings (
 CREATE INDEX IF NOT EXISTS idx_sightings_scan_id  ON sightings(scan_id);
 CREATE INDEX IF NOT EXISTS idx_sightings_asset_id ON sightings(asset_id);
 CREATE INDEX IF NOT EXISTS idx_sightings_seen_at  ON sightings(seen_at);
-
-CREATE TABLE IF NOT EXISTS heartbeats (
-    device_id   TEXT PRIMARY KEY,
-    last_seen   TEXT NOT NULL,
-    ip          TEXT,
-    note        TEXT
-);
