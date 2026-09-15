@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HomeSOC — {% block title %}{% endblock %}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background: #0f1115; color: #e6e6e6; }
+    h1 { font-weight: 600; }
+    h2 { font-weight: 500; font-size: 1.05rem; color: #9aa0aa; margin-top: 2rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    nav { margin-bottom: 1.5rem; }
+    nav a { color: #58a6ff; text-decoration: none; margin-right: 1.25rem; font-size: 0.95rem; }
+    nav a:hover { text-decoration: underline; }
+    nav a.active { border-bottom: 2px solid #58a6ff; padding-bottom: 2px; }
+    .stats { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 1rem 0 2rem; }
+    .stat { background: #1a1d24; border: 1px solid #2a2e38; border-radius: 8px; padding: 0.75rem 1.25rem; min-width: 110px; }
+    .stat .num { font-size: 1.75rem; font-weight: 600; }
+    .stat .label { font-size: 0.8rem; color: #9aa0aa; text-transform: uppercase; letter-spacing: 0.03em; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #2a2e38; font-size: 0.9rem; }
+    th { color: #9aa0aa; font-weight: 500; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.03em; }
+    .online { color: #3fb950; }
+    .offline { color: #f85149; }
+    .muted { color: #6e7681; }
+    .empty { color: #6e7681; font-style: italic; margin-top: 2rem; }
+    .status-open { color: #ff7b72; font-weight: 600; }
+    .status-resolved { color: #3fb950; }
+    .badge-new { background: #5a1d1d; color: #ff7b72; padding: 1px 8px; border-radius: 10px; font-size: 0.75rem; }
+    .sev-low { color: #d29922; }
+    .sev-medium { color: #ff7b72; }
+    .sev-high { color: #ff7b72; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>HomeSOC — {% block heading %}{% endblock %}</h1>
+
+  <nav>
+    <a href="/"{% if active == 'devices' %} class="active"{% endif %}>Devices</a>
+    <a href="/alerts"{% if active == 'alerts' %} class="active"{% endif %}>Alerts</a>
+    <a href="/summary"{% if active == 'summary' %} class="active"{% endif %}>Summary</a>
+    <a href="/heartbeats"{% if active == 'heartbeats' %} class="active"{% endif %}>Heartbeats</a>
+  </nav>
+
+  {% block content %}{% endblock %}
+</body>
+</html>
+
