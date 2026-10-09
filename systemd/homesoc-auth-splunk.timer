@@ -1,0 +1,11 @@
+[Unit]
+Description=Send HomeSOC SSH authentication logs every two minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=2min
+RandomizedDelaySec=15s
+Unit=homesoc-auth-splunk.service
+
+[Install]
+WantedBy=timers.target

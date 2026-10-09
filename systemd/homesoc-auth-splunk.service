@@ -1,0 +1,19 @@
+[Unit]
+Description=HomeSOC SSH authentication logs to Splunk HTTPS HEC
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=brandon
+Group=brandon
+SupplementaryGroups=adm
+Environment=HOME=/home/brandon
+ExecStart=/usr/bin/python3 /home/brandon/homesoc/siem/forward_auth.py
+UMask=0077
+TimeoutStartSec=180
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/brandon/.local/state/homesoc-siem
+PrivateTmp=true
