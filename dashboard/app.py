@@ -2,11 +2,19 @@
 """HomeSOC dashboard — device inventory, alerts, summary."""
 
 import sqlite3
+import secrets
 from pathlib import Path
 
-from flask import Flask, abort, render_template, request
+from flask import Flask, abort, redirect, render_template, request, session, url_for
+
+try:
+    from . import incidents as incident_store
+except ImportError:
+    import incidents as incident_store
 
 app = Flask(__name__)
+app.secret_key = incident_store.get_session_key()
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict", MAX_CONTENT_LENGTH=32768)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "db" / "homesoc.db"
@@ -238,6 +246,34 @@ def get_runbook_sources():
     }
 
 
+def csrf_token():
+    """Require the form token issued to this browser session."""
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+    return session["csrf_token"]
+
+
+def check_incident_form():
+    expected = session.get("csrf_token", "")
+    supplied = request.form.get("csrf_token", "")
+    if not expected or not secrets.compare_digest(expected.encode(), supplied.encode()):
+        abort(403, description="Form token expired or missing. Reload the page and retry.")
+
+
+def incident_page(incident_id, error="", submitted=None):
+    incident, notes = incident_store.get_incident(incident_id)
+    if incident is None:
+        abort(404)
+    source = next((alert for alert in get_alerts()
+                   if alert["filename"] == incident["alert_filename"]), None)
+    return render_template(
+        "incident.html", incident=incident, notes=notes, source=source,
+        values=submitted or incident, error=error,
+        statuses=incident_store.STATUSES, priorities=incident_store.PRIORITIES,
+        csrf_token=csrf_token(), active="incidents",
+    )
+
+
 # routes
 @app.route("/")
 def home():
@@ -321,7 +357,7 @@ def alert_detail(filename):
         "alert_detail.html", filename=filename, metadata=metadata,
         text=text, truncated=truncated, runbook_reference=runbook_reference,
         runbook_text=runbook_text, runbook_truncated=runbook_truncated,
-        runbook_error=runbook_error, active="alerts",
+        runbook_error=runbook_error, csrf_token=csrf_token(), active="alerts",
     )
 
 
@@ -347,6 +383,80 @@ def logs():
         lines=lines, tail_count=tail_count, error=error,
         line_limit=LOG_TAIL_LINES, active="logs",
     )
+
+
+@app.route("/incidents")
+def incidents():
+    all_incidents = incident_store.list_incidents()
+    status = request.args.get("status", "all")
+    if status not in incident_store.STATUSES:
+        status = "all"
+    rows = [row for row in all_incidents if status == "all" or row["status"] == status]
+    return render_template(
+        "incidents.html", incidents=rows, status_filter=status,
+        statuses=incident_store.STATUSES, total=len(all_incidents),
+        active_count=sum(row["status"] != "Resolved" for row in all_incidents),
+        active="incidents",
+    )
+
+
+@app.route("/incidents/from-alert/<filename>", methods=["GET", "POST"])
+def create_incident(filename):
+    if request.method == "POST":
+        check_incident_form()
+    source = next((alert for alert in get_alerts() if alert["filename"] == filename), None)
+    if source is None:
+        abort(404)
+    # Use the same guarded preview as the existing alert-evidence view.
+    ticket = ALERTS_DIR / filename
+    if ticket.is_symlink() or ticket.resolve().parent != ALERTS_DIR.resolve():
+        abort(404)
+    try:
+        text, _ = read_markdown_text(ticket)
+    except OSError:
+        abort(403)
+    title = next((line[2:].strip() for line in text.splitlines() if line.startswith("# ")), filename)[:200] or filename
+    priority = source.get("severity", "low")
+    if priority not in incident_store.PRIORITIES:
+        priority = "low"
+    existing = next((case for case in incident_store.list_incidents()
+                     if case["alert_filename"] == filename), None)
+    if existing:
+        return redirect(url_for("incident_detail", incident_id=existing["id"]))
+    values = dict(status="Open", priority=priority, owner="", resolution="", note="")
+    error = ""
+    if request.method == "POST":
+        values = {field: request.form.get(field, values[field]).strip() for field in values}
+        try:
+            incident_id = incident_store.get_or_create_incident(filename, title, **values)
+        except ValueError as invalid:
+            error = str(invalid)
+        else:
+            return redirect(url_for("incident_detail", incident_id=incident_id))
+    return render_template(
+        "incident_new.html", filename=filename, title=title, values=values, error=error,
+        statuses=incident_store.STATUSES, priorities=incident_store.PRIORITIES,
+        csrf_token=csrf_token(), active="incidents",
+    ), (400 if error else 200)
+
+
+@app.route("/incidents/<int:incident_id>")
+def incident_detail(incident_id):
+    return incident_page(incident_id)
+
+
+@app.route("/incidents/<int:incident_id>/update", methods=["POST"])
+def save_incident(incident_id):
+    check_incident_form()
+    submitted = {field: request.form.get(field, "").strip()
+                 for field in ("status", "priority", "owner", "resolution", "note")}
+    try:
+        incident_store.update_incident(incident_id, **submitted)
+    except LookupError:
+        abort(404)
+    except ValueError as error:
+        return incident_page(incident_id, error=str(error), submitted=submitted), 400
+    return redirect(url_for("incident_detail", incident_id=incident_id))
 
 
 @app.route("/summary")

@@ -36,6 +36,13 @@
     .device-link:hover { text-decoration: underline; }
     .host-notes { white-space: pre-wrap; }
     .log-lines { background: #1a1d24; border: 1px solid #2a2e38; border-radius: 5px; padding: 1rem; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.85rem; }
+    .incident-form { max-width: 760px; }
+    .incident-form label { display: block; margin: 1rem 0; }
+    .incident-form input, .incident-form select, .incident-form textarea { display: block; box-sizing: border-box; width: 100%; font: inherit; padding: 0.5rem; margin-top: 0.4rem; border: 1px solid #2a2e38; border-radius: 5px; background: #1a1d24; color: #e6e6e6; }
+    button, .button { display: inline-block; font: inherit; padding: 0.5rem 1rem; border: 1px solid #2a2e38; border-radius: 5px; background: #1a1d24; color: #e6e6e6; cursor: pointer; text-decoration: none; }
+    button:hover, .button:hover { background: #2a2e38; }
+    button:focus-visible, .button:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; }
+    .form-error { color: #ff7b72; }
     .sev-low { color: #d29922; }
     .sev-medium { color: #ff7b72; }
     .sev-high { color: #ff7b72; font-weight: 700; }
@@ -48,6 +55,7 @@
     <a href="/"{% if active == 'devices' %} class="active"{% endif %}>Devices</a>
     <a href="/alerts"{% if active == 'alerts' %} class="active"{% endif %}>Alerts</a>
     <a href="/logs"{% if active == 'logs' %} class="active"{% endif %}>Recent Logs</a>
+    <a href="/incidents"{% if active == 'incidents' %} class="active"{% endif %}>Incidents</a>
     <a href="/summary"{% if active == 'summary' %} class="active"{% endif %}>Summary</a>
   </nav>
 

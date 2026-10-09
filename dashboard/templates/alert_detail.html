@@ -14,6 +14,9 @@
       <tr><th scope="row">Asset MAC</th><td>{{ metadata.get('asset_mac', '-') }}</td></tr>
     </tbody>
   </table>
+  <p><a class="button" href="{{ url_for('create_incident', filename=filename) }}">Prepare / open incident</a></p>
+  <p class="muted">For a new case, this opens an unsaved form. Only Save new incident creates the record. Existing cases open directly.</p>
+  <p class="muted">Incident workflow is separate from this source ticket. Resolving a case does not change detector status or deduplication.</p>
   <h2>Source ticket and evidence</h2>
   {% if truncated %}<p class="empty">Preview limited to the first 131,072 characters. Read the source file for the full ticket.</p>{% endif %}
   <pre class="log-lines">{{ text }}</pre>

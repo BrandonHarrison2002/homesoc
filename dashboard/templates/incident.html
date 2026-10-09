@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}INC-{{ '%04d'|format(incident['id']) }}{% endblock %}
+{% block heading %}INC-{{ '%04d'|format(incident['id']) }} — {{ incident['title'] }}{% endblock %}
+{% block content %}
+  <p><a class="device-link" href="{{ url_for('incidents') }}">Back to Incidents</a></p>
+  <p class="muted">Created {{ incident['created_at'] }} UTC · Updated {{ incident['updated_at'] }} UTC</p>
+  {% if source %}
+  <p>Source ticket: <a class="device-link" href="{{ url_for('alert_detail', filename=incident['alert_filename']) }}">{{ incident['alert_filename'] }}</a> · Source status: {{ source.get('status', 'unknown') }}</p>
+  {% else %}
+  <p class="empty">Source ticket {{ incident['alert_filename'] }} is no longer available. The incident record is retained.</p>
+  {% endif %}
+  <p class="muted">Resolving this case does not update source Markdown or detector deduplication. Follow the response runbook and update the source ticket manually when appropriate.</p>
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+  <form class="incident-form" method="post" action="{{ url_for('save_incident', incident_id=incident['id']) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Owner<input name="owner" maxlength="80" value="{{ values['owner'] }}" placeholder="Name or unassigned"></label>
+    <label>Status<select name="status">{% for status in statuses %}<option value="{{ status }}"{% if values['status'] == status %} selected{% endif %}>{{ status }}</option>{% endfor %}</select></label>
+    <label>Priority<select name="priority">{% for priority in priorities %}<option value="{{ priority }}"{% if values['priority'] == priority %} selected{% endif %}>{{ priority }}</option>{% endfor %}</select></label>
+    <label>Resolution (at least 10 characters when resolving)<textarea name="resolution" rows="4" maxlength="4000">{{ values['resolution'] }}</textarea></label>
+    <label>Add investigation note<textarea name="note" rows="4" maxlength="4000">{{ values.get('note', '') if values is mapping else '' }}</textarea></label>
+    <button type="submit">Save changes</button>
+  </form>
+  <h2>Investigation timeline</h2>
+  {% for note in notes %}
+  <p class="muted">{{ note['created_at'] }} UTC</p>
+  <pre class="log-lines">{{ note['body'] }}</pre>
+  {% else %}
+  <p class="empty">No investigation notes yet.</p>
+  {% endfor %}
+{% endblock %}

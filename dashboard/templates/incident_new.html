@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}New incident{% endblock %}
+{% block heading %}New incident — {{ title }}{% endblock %}
+{% block content %}
+  <p class="muted">Unsaved form: no case has been created. Cancel leaves your incident list unchanged.</p>
+  <p><a class="device-link" href="{{ url_for('alert_detail', filename=filename) }}">Cancel / return to alert</a></p>
+  <p class="muted">Source ticket: {{ filename }}. Incident workflow does not change detector tickets.</p>
+  <p class="muted">For a valid detection caused by authorized activity, explain that benign outcome in your resolution. Do not label it malicious solely because it triggered a rule.</p>
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+  <form class="incident-form" method="post" action="{{ url_for('create_incident', filename=filename) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Owner<input name="owner" maxlength="80" value="{{ values['owner'] }}" placeholder="Name or unassigned"></label>
+    <label>Status<select name="status">{% for status in statuses %}<option value="{{ status }}"{% if values['status'] == status %} selected{% endif %}>{{ status }}</option>{% endfor %}</select></label>
+    <label>Priority<select name="priority">{% for priority in priorities %}<option value="{{ priority }}"{% if values['priority'] == priority %} selected{% endif %}>{{ priority }}</option>{% endfor %}</select></label>
+    <label>Resolution (at least 10 characters when resolving)<textarea name="resolution" rows="4" maxlength="4000">{{ values['resolution'] }}</textarea></label>
+    <label>Add investigation note<textarea name="note" rows="4" maxlength="4000">{{ values.get('note', '') if values is mapping else '' }}</textarea></label>
+    <button type="submit">Save new incident</button>
+  </form>
+{% endblock %}
