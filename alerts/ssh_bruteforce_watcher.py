@@ -150,13 +150,13 @@ def find_bruteforce_sources(events: list[dict]) -> list[dict]:
                 break
 
         if triggered:
-            usernames = sorted({attempt["username"] for attempt in attempts})
+            usernames = sorted({attempt["username"] for attempt in attempts_in_window})
 
             hits.append({
                 "source_ip": source_ip,
-                "count": len(attempts),
-                "first": attempts[0]["ts"].isoformat(),
-                "last": attempts[-1]["ts"].isoformat(),
+                "count": len(attempts_in_window),
+                "first": attempts_in_window[0]["ts"].isoformat(),
+                "last": attempts_in_window[-1]["ts"].isoformat(),
                 "usernames": usernames,
             })
 
@@ -305,7 +305,8 @@ def load_state(state_path: Path) -> dict:
         }
 
 
-def save_state(state_path: Path, offset: int, inode: int) -> None:
+def save_state(state_path: Path, offset: int, inode: int | None,
+               recent_events: list[dict] | None = None) -> None:
     """
     Save the current auth.log position so the next run continues from there.
     """
@@ -315,6 +316,7 @@ def save_state(state_path: Path, offset: int, inode: int) -> None:
         "last_byte_offset": offset,
         "last_inode": inode,
         "last_run": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "recent_events": recent_events or [],
     }
 
     temp_path = state_path.with_suffix(".json.tmp")
@@ -324,7 +326,8 @@ def save_state(state_path: Path, offset: int, inode: int) -> None:
 
 
 # Main processing
-def process_log(log_path: Path, state: dict, alerts_dir: Path) -> tuple[int, int | None, int]:
+def process_log(log_path: Path, state: dict, alerts_dir: Path,
+                now: datetime | None = None) -> tuple[int, int | None, int]:
     """
     Read new auth.log lines, detect brute-force sources, and write tickets.
 
@@ -356,19 +359,33 @@ def process_log(log_path: Path, state: dict, alerts_dir: Path) -> tuple[int, int
     else:
         start_offset = last_offset
 
-    events = []
+    now = now or datetime.now(timezone.utc)
+    cutoff = now - timedelta(minutes=WINDOW_MINUTES)
+    # Older state files have no buffer: keep their cursor and start an empty one.
+    events = list(state.get("recent_events", []))
 
     with log_path.open("r", encoding="utf-8", errors="replace") as auth_log:
         auth_log.seek(start_offset)
 
-        for line in auth_log:
+        while True:
+            line_start = auth_log.tell()
+            line = auth_log.readline()
+            if not line:
+                break
+            if not line.endswith("\n"):
+                # Retry an incomplete line next run instead of losing the attempt.
+                auth_log.seek(line_start)
+                break
             event = parse_ssh_failure(line)
-
             if event is not None:
                 events.append(event)
 
         new_offset = auth_log.tell()
 
+    # Use log timestamps, not the time the timer happened to read each line.
+    events = [event for event in events
+              if (timestamp := parse_ts(event["timestamp"])) is not None
+              and timestamp.tzinfo is not None and cutoff <= timestamp <= now]
     hits = find_bruteforce_sources(events)
 
     ticket_count = 0
@@ -384,6 +401,11 @@ def process_log(log_path: Path, state: dict, alerts_dir: Path) -> tuple[int, int
                 f"({hit['count']} attempts) -> {ticket_path.name}"
             )
 
+    # Consume a detected burst even when an open ticket suppresses a duplicate.
+    # Closing that ticket must not recreate it from the same remembered attempts.
+    triggered_ips = {hit["source_ip"] for hit in hits}
+    state["recent_events"] = [event for event in events
+                              if event["source_ip"] not in triggered_ips]
     return new_offset, current_inode, ticket_count
 
 
@@ -408,7 +430,7 @@ def run_watcher() -> int:
         ALERTS_DIR,
     )
 
-    save_state(STATE_FILE, new_offset, new_inode)
+    save_state(STATE_FILE, new_offset, new_inode, state.get("recent_events", []))
 
     finished = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
