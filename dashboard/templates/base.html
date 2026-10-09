@@ -26,6 +26,12 @@
     .status-open { color: #ff7b72; font-weight: 600; }
     .status-resolved { color: #3fb950; }
     .badge-new { background: #5a1d1d; color: #ff7b72; padding: 1px 8px; border-radius: 10px; font-size: 0.75rem; }
+    .device-filters { display: flex; gap: 1rem; flex-wrap: wrap; align-items: end; margin: 1rem 0; }
+    .device-filters label { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; }
+    .device-filters input, .device-filters select, .device-filters button { font: inherit; padding: 0.5rem; border: 1px solid #2a2e38; border-radius: 5px; background: #1a1d24; color: #e6e6e6; }
+    .device-filters input { width: min(320px, 75vw); }
+    .device-filters button { cursor: pointer; }
+    .device-filters a { color: #58a6ff; padding: 0.5rem 0; }
     .sev-low { color: #d29922; }
     .sev-medium { color: #ff7b72; }
     .sev-high { color: #ff7b72; font-weight: 700; }

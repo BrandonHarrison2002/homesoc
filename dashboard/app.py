@@ -4,7 +4,7 @@
 import sqlite3
 from pathlib import Path
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
@@ -121,16 +121,45 @@ def get_summary():
     finally:
         conn.close()
 
+def filter_devices(devices, query, status, review):
+    """Narrow the displayed rows without changing the inventory database."""
+    matches = []
+    search = query.casefold()
+    fields = ("ip", "mac", "hostname", "owner", "device_type")
+    for device in devices:
+        if status != "all" and device["status"] != status:
+            continue
+        if review == "unreviewed" and device["is_known"] != 0:
+            continue
+        if review == "known" and device["is_known"] == 0:
+            continue
+        if search and not any(search in str(device[field] or "").casefold() for field in fields):
+            continue
+        matches.append(device)
+    return matches
+
+
 # routes
 @app.route("/")
 def home():
-    devices = get_devices()
+    all_devices = get_devices()
+    query = request.args.get("q", "").strip()
+    status = request.args.get("status", "all")
+    review = request.args.get("review", "all")
+    if status not in ("all", "online", "offline"):
+        status = "all"
+    if review not in ("all", "known", "unreviewed"):
+        review = "all"
+    devices = filter_devices(all_devices, query, status, review)
     return render_template(
         "devices.html",
         devices=devices,
-        total=len(devices),
-        online=sum(1 for d in devices if d["status"] == "online"),
-        unreviewed=sum(1 for d in devices if d["is_known"] == 0),
+        total=len(all_devices),
+        online=sum(1 for d in all_devices if d["status"] == "online"),
+        unreviewed=sum(1 for d in all_devices if d["is_known"] == 0),
+        query=query,
+        status_filter=status,
+        review_filter=review,
         window=ONLINE_WINDOW_MIN,
         active="devices",
     )

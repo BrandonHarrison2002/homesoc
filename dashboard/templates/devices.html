@@ -8,6 +8,30 @@
     <div class="stat"><div class="num">{{ unreviewed }}</div><div class="label">Unreviewed</div></div>
   </div>
 
+  <form class="device-filters" method="get" action="{{ url_for('home') }}">
+    <label for="device-search">Search hosts
+      <input id="device-search" type="search" name="q" value="{{ query }}" placeholder="IP, MAC, hostname, owner or type">
+    </label>
+    <label for="device-status">Status
+      <select id="device-status" name="status">
+        <option value="all"{% if status_filter == 'all' %} selected{% endif %}>All statuses</option>
+        <option value="online"{% if status_filter == 'online' %} selected{% endif %}>Online ({{ window }}m)</option>
+        <option value="offline"{% if status_filter == 'offline' %} selected{% endif %}>Offline</option>
+      </select>
+    </label>
+    <label for="device-review">Review
+      <select id="device-review" name="review">
+        <option value="all"{% if review_filter == 'all' %} selected{% endif %}>All devices</option>
+        <option value="known"{% if review_filter == 'known' %} selected{% endif %}>Known</option>
+        <option value="unreviewed"{% if review_filter == 'unreviewed' %} selected{% endif %}>Unreviewed</option>
+      </select>
+    </label>
+    <button type="submit">Apply filters</button>
+    <a href="{{ url_for('home') }}">Clear filters</a>
+  </form>
+  <p class="muted">Showing {{ devices|length }} of {{ total }} devices. Inventory totals above include all devices.</p>
+
+  {% if devices %}
   <table>
     <thead>
       <tr><th>Status</th><th>IP</th><th>MAC</th><th>Hostname</th><th>Owner</th><th>Type</th><th>Last seen (UTC)</th></tr>
@@ -26,4 +50,9 @@
       {% endfor %}
     </tbody>
   </table>
+  {% elif total %}
+  <p class="empty">No devices match these filters. Try another search or clear the filters.</p>
+  {% else %}
+  <p class="empty">No devices have been discovered yet.</p>
+  {% endif %}
 {% endblock %}
