@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Alert ticket{% endblock %}
+{% block heading %}Alert ticket{% endblock %}
+{% block content %}
+  <p><a class="device-link" href="{{ url_for('alerts') }}">Back to Alerts</a></p>
+  <p class="muted">Source: evidence/alerts/{{ filename }}. Read-only evidence and runbook reference; this page does not resolve tickets or execute commands.</p>
+  <table>
+    <tbody>
+      <tr><th scope="row">Source status</th><td>{{ metadata.get('status', '-') }}</td></tr>
+      <tr><th scope="row">Severity</th><td>{{ metadata.get('severity', '-') }}</td></tr>
+      <tr><th scope="row">Detected (UTC)</th><td>{{ metadata.get('detected_at', '-') }}</td></tr>
+      <tr><th scope="row">Detector</th><td>{{ metadata.get('detected_by', '-') }}</td></tr>
+      <tr><th scope="row">Asset / source IP</th><td>{{ metadata.get('asset_ip', metadata.get('source_ip', '-')) }}</td></tr>
+      <tr><th scope="row">Asset MAC</th><td>{{ metadata.get('asset_mac', '-') }}</td></tr>
+    </tbody>
+  </table>
+  <h2>Source ticket and evidence</h2>
+  {% if truncated %}<p class="empty">Preview limited to the first 131,072 characters. Read the source file for the full ticket.</p>{% endif %}
+  <pre class="log-lines">{{ text }}</pre>
+
+  <h2>Linked response runbook</h2>
+  {% if runbook_reference %}<p class="muted">{{ runbook_reference }}</p>{% endif %}
+  {% if runbook_error %}
+  <p class="empty">{{ runbook_error }}</p>
+  {% else %}
+  {% if runbook_truncated %}<p class="empty">Preview limited to the first 131,072 characters. Read the source file for the full runbook.</p>{% endif %}
+  <pre class="log-lines">{{ runbook_text }}</pre>
+  {% endif %}
+{% endblock %}

@@ -10,7 +10,7 @@
   {% if alerts %}
   <table>
     <thead>
-      <tr><th>Status</th><th>Severity</th><th>Detected (UTC)</th><th>Rule</th><th>IP</th><th>MAC</th></tr>
+      <tr><th>Status</th><th>Severity</th><th>Detected (UTC)</th><th>Rule</th><th>IP</th><th>MAC</th><th>Ticket</th></tr>
     </thead>
     <tbody>
       {% for a in alerts %}
@@ -21,6 +21,7 @@
         <td>{{ a.get('detected_by', '-') }}</td>
         <td>{{ a.get('asset_ip', a.get('source_ip', '-')) }}</td>
         <td class="muted">{{ a.get('asset_mac', '-') }}</td>
+        <td><a class="device-link" href="{{ url_for('alert_detail', filename=a['filename']) }}">Open ticket</a></td>
       </tr>
       {% endfor %}
     </tbody>

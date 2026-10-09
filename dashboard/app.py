@@ -15,6 +15,8 @@ LOGS_DIR = Path("/var/log/remote")
 AUTH_LOG = Path("/var/log/auth.log")
 LOG_TAIL_BYTES = 65536
 LOG_TAIL_LINES = 200
+RUNBOOKS_DIR = PROJECT_ROOT / "docs" / "runbooks"
+MARKDOWN_LIMIT = 131072
 
 # anything last seen within this window is considered "online"
 ONLINE_WINDOW_MIN = 30
@@ -73,6 +75,8 @@ def get_alerts():
     if not ALERTS_DIR.exists():
         return alerts
     for ticket in sorted(ALERTS_DIR.glob("*.md"), reverse=True):
+        if ticket.is_symlink() or not ticket.is_file():
+            continue
         try:
             meta = parse_frontmatter(ticket.read_text())
         except OSError:
@@ -218,6 +222,22 @@ def read_log_tail(path):
     return list(reversed(lines[-LOG_TAIL_LINES:]))
 
 
+def read_markdown_text(path):
+    """Display a bounded amount of source text without rendering embedded HTML."""
+    with path.open(encoding="utf-8", errors="replace") as source:
+        text = source.read(MARKDOWN_LIMIT + 1)
+    return text[:MARKDOWN_LIMIT], len(text) > MARKDOWN_LIMIT
+
+
+def get_runbook_sources():
+    """Match a ticket's repository-relative reference to an existing local runbook."""
+    return {
+        f"docs/runbooks/{path.name}": path
+        for path in sorted(RUNBOOKS_DIR.glob("*.md"))
+        if path.is_file() and not path.is_symlink()
+    }
+
+
 # routes
 @app.route("/")
 def home():
@@ -269,6 +289,39 @@ def alerts():
         total=len(all_alerts),
         open_count=open_count,
         active="alerts",
+    )
+
+
+@app.route("/alerts/<filename>")
+def alert_detail(filename):
+    ticket = ALERTS_DIR / filename
+    if (not filename.endswith(".md") or "\x00" in filename or ticket.is_symlink()
+            or ticket.resolve().parent != ALERTS_DIR.resolve() or not ticket.is_file()):
+        abort(404)
+    try:
+        text, truncated = read_markdown_text(ticket)
+    except OSError:
+        abort(403, description="The dashboard service cannot read this ticket.")
+    metadata = parse_frontmatter(text)
+    runbook_reference = metadata.get("runbook", "")
+    runbooks = get_runbook_sources()
+    runbook_text = ""
+    runbook_truncated = False
+    runbook_error = ""
+    if runbook_reference in runbooks:
+        try:
+            runbook_text, runbook_truncated = read_markdown_text(runbooks[runbook_reference])
+        except OSError:
+            runbook_error = "The linked runbook cannot be read. Check file permissions."
+    elif runbook_reference:
+        runbook_error = "The linked runbook is not an available local runbook."
+    else:
+        runbook_error = "This ticket has no linked runbook."
+    return render_template(
+        "alert_detail.html", filename=filename, metadata=metadata,
+        text=text, truncated=truncated, runbook_reference=runbook_reference,
+        runbook_text=runbook_text, runbook_truncated=runbook_truncated,
+        runbook_error=runbook_error, active="alerts",
     )
 
 
