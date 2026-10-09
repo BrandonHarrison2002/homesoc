@@ -35,6 +35,7 @@
     .device-link { color: #58a6ff; text-decoration: none; }
     .device-link:hover { text-decoration: underline; }
     .host-notes { white-space: pre-wrap; }
+    .log-lines { background: #1a1d24; border: 1px solid #2a2e38; border-radius: 5px; padding: 1rem; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.85rem; }
     .sev-low { color: #d29922; }
     .sev-medium { color: #ff7b72; }
     .sev-high { color: #ff7b72; font-weight: 700; }
@@ -46,6 +47,7 @@
   <nav>
     <a href="/"{% if active == 'devices' %} class="active"{% endif %}>Devices</a>
     <a href="/alerts"{% if active == 'alerts' %} class="active"{% endif %}>Alerts</a>
+    <a href="/logs"{% if active == 'logs' %} class="active"{% endif %}>Recent Logs</a>
     <a href="/summary"{% if active == 'summary' %} class="active"{% endif %}>Summary</a>
   </nav>
 

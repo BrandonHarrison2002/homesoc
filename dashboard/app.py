@@ -11,6 +11,10 @@ app = Flask(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "db" / "homesoc.db"
 ALERTS_DIR = PROJECT_ROOT / "evidence" / "alerts"
+LOGS_DIR = Path("/var/log/remote")
+AUTH_LOG = Path("/var/log/auth.log")
+LOG_TAIL_BYTES = 65536
+LOG_TAIL_LINES = 200
 
 # anything last seen within this window is considered "online"
 ONLINE_WINDOW_MIN = 30
@@ -183,6 +187,37 @@ def get_host_alerts(device):
     return matches[:50]
 
 
+def get_log_sources():
+    """Only offer configured local log files, never paths supplied by a visitor."""
+    sources = {}
+    try:
+        for path in sorted(LOGS_DIR.glob("*.log")):
+            if path.is_file() and not path.is_symlink():
+                sources[f"Remote: {path.name}"] = path
+        if AUTH_LOG.is_file() and not AUTH_LOG.is_symlink():
+            sources["Pi: auth.log"] = AUTH_LOG
+    except OSError:
+        pass
+    return sources
+
+
+def read_log_tail(path):
+    """Read at most 64 KiB and return the latest 200 complete lines, newest first."""
+    with path.open("rb") as log:
+        log.seek(0, 2)
+        start = max(0, log.tell() - LOG_TAIL_BYTES)
+        log.seek(start)
+        block = log.read(LOG_TAIL_BYTES)
+    if start:
+        # The first line might start before the bounded window; discard its fragment.
+        block = block.partition(b"\n")[2]
+    if not block.endswith(b"\n"):
+        # Ignore an unfinished line until the writer completes it.
+        block = block.rpartition(b"\n")[0]
+    lines = block.decode("utf-8", errors="replace").splitlines()
+    return list(reversed(lines[-LOG_TAIL_LINES:]))
+
+
 # routes
 @app.route("/")
 def home():
@@ -234,6 +269,30 @@ def alerts():
         total=len(all_alerts),
         open_count=open_count,
         active="alerts",
+    )
+
+
+@app.route("/logs")
+def logs():
+    sources = get_log_sources()
+    selected = request.args.get("source", next(iter(sources), ""))
+    query = request.args.get("q", "").strip()
+    lines = []
+    error = ""
+    if selected in sources:
+        try:
+            lines = read_log_tail(sources[selected])
+        except OSError:
+            error = "This log cannot be read. Check the dashboard service user's file permissions."
+    elif selected:
+        error = "Unknown log source. Choose one of the available files."
+    tail_count = len(lines)
+    if query:
+        lines = [line for line in lines if query.casefold() in line.casefold()]
+    return render_template(
+        "logs.html", sources=sources, selected=selected, query=query,
+        lines=lines, tail_count=tail_count, error=error,
+        line_limit=LOG_TAIL_LINES, active="logs",
     )
 
 

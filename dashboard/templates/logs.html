@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Recent Logs{% endblock %}
+{% block heading %}Recent Logs{% endblock %}
+{% block content %}
+  <p class="muted">Read-only file tails: up to {{ line_limit }} lines within the last 64 KiB, newest first. Search applies only to this tail. Original timestamps and time zones are retained.</p>
+  {% if sources %}
+  <form class="device-filters" method="get" action="{{ url_for('logs') }}">
+    <label for="log-source">Log source
+      <select id="log-source" name="source">
+        {% for name in sources %}
+        <option value="{{ name }}"{% if name == selected %} selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label for="log-query">Search log lines
+      <input id="log-query" type="search" name="q" value="{{ query }}" placeholder="IP, DHCPACK, Failed password…">
+    </label>
+    <button type="submit">Read logs</button>
+    {% if selected in sources %}<a href="{{ url_for('logs', source=selected) }}">Clear search</a>{% endif %}
+  </form>
+  {% if error %}
+  <p class="empty">{{ error }}</p>
+  {% else %}
+  <p class="muted">{{ selected }} · Showing {{ lines|length }} of {{ tail_count }} lines in this tail. Refresh or submit again to read current data.</p>
+  <p class="muted">The selected file identifies the log sender. A router message mentioning a device is still router evidence.</p>
+  {% if lines %}
+  <pre class="log-lines">{% for line in lines %}{{ line }}{% if not loop.last %}{{ '\n' }}{% endif %}{% endfor %}</pre>
+  {% elif query %}
+  <p class="empty">No lines in this tail match your search.</p>
+  {% else %}
+  <p class="empty">No complete log lines are available in this tail.</p>
+  {% endif %}
+  {% endif %}
+  {% else %}
+  <p class="empty">No log sources found. Check /var/log/remote and /var/log/auth.log, and the service user's permissions.</p>
+  {% endif %}
+{% endblock %}
