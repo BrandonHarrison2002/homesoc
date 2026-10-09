@@ -4,7 +4,7 @@
 import sqlite3
 from pathlib import Path
 
-from flask import Flask, render_template, request
+from flask import Flask, abort, render_template, request
 
 app = Flask(__name__)
 
@@ -139,6 +139,50 @@ def filter_devices(devices, query, status, review):
     return matches
 
 
+def get_host_detail(mac):
+    """Look up a stable MAC identity and its latest 20 discovery sightings."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        device = conn.execute(
+            """
+            SELECT *,
+                CASE WHEN last_seen > datetime('now', ?)
+                     THEN 'online' ELSE 'offline' END AS status
+            FROM assets
+            WHERE mac = ? COLLATE NOCASE
+            """,
+            (f"-{ONLINE_WINDOW_MIN} minutes", mac),
+        ).fetchone()
+        if device is None:
+            return None, []
+        sightings = conn.execute(
+            """
+            SELECT s.seen_at, s.ip, s.scan_id, scans.scan_type
+            FROM sightings AS s
+            LEFT JOIN scans ON scans.id = s.scan_id
+            WHERE s.asset_id = ?
+            ORDER BY s.seen_at DESC, s.scan_id DESC
+            LIMIT 20
+            """,
+            (device["id"],),
+        ).fetchall()
+        return device, sightings
+    finally:
+        conn.close()
+
+
+def get_host_alerts(device):
+    """Find ticket candidates; an IP-only match needs DHCP history verification."""
+    matches = []
+    for alert in get_alerts():
+        if alert.get("asset_mac", "").casefold() == device["mac"].casefold():
+            matches.append(dict(alert, match_basis="MAC match"))
+        elif device["ip"] and device["ip"] in (alert.get("asset_ip"), alert.get("source_ip")):
+            matches.append(dict(alert, match_basis="Current IP match; verify DHCP history"))
+    return matches[:50]
+
+
 # routes
 @app.route("/")
 def home():
@@ -160,6 +204,21 @@ def home():
         query=query,
         status_filter=status,
         review_filter=review,
+        window=ONLINE_WINDOW_MIN,
+        active="devices",
+    )
+
+
+@app.route("/devices/<mac>")
+def host_detail(mac):
+    device, sightings = get_host_detail(mac)
+    if device is None:
+        abort(404)
+    return render_template(
+        "host.html",
+        device=device,
+        sightings=sightings,
+        related_alerts=get_host_alerts(device),
         window=ONLINE_WINDOW_MIN,
         active="devices",
     )

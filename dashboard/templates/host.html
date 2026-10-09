@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ device['hostname'] or device['ip'] or device['mac'] }}{% endblock %}
+{% block heading %}Host — {{ device['hostname'] or device['ip'] or device['mac'] }}{% endblock %}
+{% block content %}
+  <p><a class="device-link" href="{{ url_for('home') }}">Back to Devices</a></p>
+  <p class="muted">MAC identifies this inventory record even when its IP changes. Online means seen by discovery within {{ window }} minutes, not a connectivity test.</p>
+  <h2>Inventory information</h2>
+  <table>
+    <tbody>
+      <tr><th scope="row">Status</th><td class="{{ device['status'] }}">{{ device['status'] }}</td></tr>
+      <tr><th scope="row">Review</th><td>{{ 'Known' if device['is_known'] else 'Unreviewed' }}</td></tr>
+      <tr><th scope="row">Current IP</th><td>{{ device['ip'] or '-' }}</td></tr>
+      <tr><th scope="row">MAC</th><td>{{ device['mac'] }}</td></tr>
+      <tr><th scope="row">Hostname</th><td>{{ device['hostname'] or '-' }}</td></tr>
+      <tr><th scope="row">Vendor</th><td>{{ device['vendor'] or '-' }}</td></tr>
+      <tr><th scope="row">Owner</th><td>{{ device['owner'] or '-' }}</td></tr>
+      <tr><th scope="row">Device type</th><td>{{ device['device_type'] or '-' }}</td></tr>
+      <tr><th scope="row">First seen (UTC)</th><td>{{ device['first_seen'] }}</td></tr>
+      <tr><th scope="row">Last seen (UTC)</th><td>{{ device['last_seen'] }}</td></tr>
+    </tbody>
+  </table>
+  <h2>Inventory notes</h2>
+  <p class="host-notes">{{ device['notes'] or 'No inventory notes recorded.' }}</p>
+
+  <h2>Recent discovery sightings</h2>
+  <p class="muted">Latest {{ sightings|length }} recorded sightings, up to 20. Timestamps are UTC.</p>
+  {% if sightings %}
+  <table>
+    <thead><tr><th>Seen (UTC)</th><th>IP at discovery</th><th>Scan ID</th><th>Scan type</th></tr></thead>
+    <tbody>
+      {% for sighting in sightings %}
+      <tr><td>{{ sighting['seen_at'] }}</td><td>{{ sighting['ip'] or '-' }}</td><td>{{ sighting['scan_id'] }}</td><td>{{ sighting['scan_type'] or '-' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No discovery sightings recorded for this host.</p>
+  {% endif %}
+
+  <h2>Matching alert summaries</h2>
+  <p class="muted">Up to 50 tickets matched by MAC or current IP. IP addresses can be reassigned; an IP-only match does not prove the event belongs to this device.</p>
+  {% if related_alerts %}
+  <table>
+    <thead><tr><th>Detected (UTC)</th><th>Rule</th><th>Status</th><th>Severity</th><th>Match basis</th><th>Source ticket</th></tr></thead>
+    <tbody>
+      {% for alert in related_alerts %}
+      <tr>
+        <td>{{ alert.get('detected_at', '-') }}</td>
+        <td>{{ alert.get('detected_by', '-') }}</td>
+        <td>{{ alert.get('status', '-') }}</td>
+        <td>{{ alert.get('severity', '-') }}</td>
+        <td>{{ alert['match_basis'] }}</td>
+        <td>{{ alert['filename'] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No alert tickets matched this host's MAC or current IP.</p>
+  {% endif %}
+{% endblock %}

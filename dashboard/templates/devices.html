@@ -40,7 +40,7 @@
       {% for d in devices %}
       <tr>
         <td class="{{ d['status'] }}">&#9679; {{ d['status'] }}</td>
-        <td>{{ d['ip'] }}</td>
+        <td><a class="device-link" href="{{ url_for('host_detail', mac=d['mac']) }}">{{ d['ip'] or d['mac'] }}</a></td>
         <td class="muted">{{ d['mac'] }}</td>
         <td>{{ d['hostname'] }}</td>
         <td>{{ d['owner'] }}</td>
