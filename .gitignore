@@ -6,6 +6,8 @@ __pycache__/
 venv/
 
 # SQLite databases (data, not code — never commit)
+# Private incident database and Flask session key
+dashboard-state/
 *.db
 *.sqlite
 *.sqlite3
