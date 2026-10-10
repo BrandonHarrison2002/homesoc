@@ -19,6 +19,24 @@
       <tr><th scope="row">Last seen (UTC)</th><td>{{ device['last_seen'] }}</td></tr>
     </tbody>
   </table>
+  <h2>Edit inventory</h2>
+  <p class="muted">Approval applies to this MAC address. Save explicitly after identifying the device. Incident resolution and archiving do not approve it; inventory changes do not close alerts.</p>
+  {% if inventory_saved %}<p role="status">Inventory saved.</p>{% endif %}
+  {% if inventory_error %}<p class="form-error" role="alert">{{ inventory_error }}</p>{% endif %}
+  <form class="incident-form" method="post" action="{{ url_for('edit_inventory', mac=device['mac']) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Owner<input name="owner" maxlength="100" value="{{ inventory_values['owner'] }}" placeholder="Brandon"></label>
+    <label>Device type<input name="device_type" maxlength="100" value="{{ inventory_values['device_type'] }}" placeholder="phone, laptop, router, Server VM"></label>
+    <label>Review status<select name="review">
+      <option value="unreviewed"{% if inventory_values['review'] == 'unreviewed' %} selected{% endif %}>Unreviewed</option>
+      <option value="known"{% if inventory_values['review'] == 'known' %} selected{% endif %}>Known / approved</option>
+    </select></label>
+    <label>Inventory notes<textarea name="notes" rows="3" maxlength="4000">{{ inventory_values['notes'] }}</textarea></label>
+    {% if not device['is_known'] %}
+    <p><label><input type="checkbox" name="confirm_identity" value="yes"> I have identified this MAC and approve this device.</label></p>
+    {% endif %}
+    <div class="form-actions"><button type="submit">Save inventory</button> <a href="{{ url_for('host_detail', mac=device['mac']) }}">Cancel edits</a></div>
+  </form>
   <h2>Review visibility</h2>
   <p>Last seen: {{ review_device['age_days'] ~ ' days ago' if review_device['age_days'] is not none else 'unknown' }}.</p>
   <p class="muted">Archive keeps this device and its sightings but hides it from the default inventory view. It does not approve the MAC, close alerts, or suppress detection. A changed discovery timestamp brings it back into active review.</p>

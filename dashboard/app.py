@@ -335,7 +335,7 @@ def host_detail(mac):
     return host_page(mac)
 
 
-def host_page(mac, error="", reason=""):
+def host_page(mac, error="", reason="", inventory_error="", submitted=None):
     device, sightings = get_host_detail(mac)
     if device is None:
         abort(404)
@@ -346,9 +346,57 @@ def host_page(mac, error="", reason=""):
         related_alerts=get_host_alerts(device),
         review_device=device_reviews.annotate(device, device_reviews.records()),
         error=error, archive_reason=reason, csrf_token=csrf_token(),
+        inventory_error=inventory_error,
+        inventory_values=submitted if submitted is not None else {
+            "owner": device["owner"] or "", "device_type": device["device_type"] or "",
+            "notes": device["notes"] or "", "review": "known" if device["is_known"] else "unreviewed",
+        },
+        inventory_saved=request.args.get("inventory_saved") == "1",
         window=ONLINE_WINDOW_MIN,
         active="devices",
     )
+
+
+@app.route("/devices/<mac>/inventory", methods=["POST"])
+def edit_inventory(mac):
+    check_incident_form()
+    device, _ = get_host_detail(mac)
+    if device is None:
+        abort(404)
+    submitted = {key: request.form.get(key, "").strip()
+                 for key in ("owner", "device_type", "notes", "review")}
+    error = ""
+    if submitted["review"] not in ("known", "unreviewed"):
+        error = "Choose Known / approved or Unreviewed."
+    elif len(submitted["owner"]) > 100 or len(submitted["device_type"]) > 100 or len(submitted["notes"]) > 4000:
+        error = "Owner and device type are limited to 100 characters; notes to 4,000."
+    elif any("\x00" in value for value in submitted.values()):
+        error = "Inventory fields cannot contain null characters."
+    elif submitted["review"] == "known" and (not submitted["owner"] or not submitted["device_type"]):
+        error = "Enter an owner and device type before approving this device."
+    elif submitted["review"] == "known" and not device["is_known"] and request.form.get("confirm_identity") != "yes":
+        error = "Confirm that you identified and approve this MAC before marking it known."
+    if error:
+        return host_page(mac, inventory_error=error, submitted=submitted), 400
+    # Open the existing inventory only; do not create an empty database on a wrong path.
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_PATH.resolve().as_uri() + "?mode=rw", uri=True, timeout=5)
+        changed = conn.execute(
+            "UPDATE assets SET owner=?, device_type=?, notes=?, is_known=? WHERE mac=?",
+            (submitted["owner"] or None, submitted["device_type"] or None,
+             submitted["notes"] or None, int(submitted["review"] == "known"), device["mac"]),
+        ).rowcount
+        if changed != 1:
+            conn.rollback()
+            abort(404)
+        conn.commit()
+    except sqlite3.Error:
+        return host_page(mac, inventory_error="Inventory could not be saved. Check database access and retry.", submitted=submitted), 503
+    finally:
+        if conn is not None:
+            conn.close()
+    return redirect(url_for("host_detail", mac=device["mac"], inventory_saved="1"))
 
 
 @app.route("/devices/<mac>/archive", methods=["POST"])
