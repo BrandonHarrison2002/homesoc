@@ -10,10 +10,12 @@ from flask import Flask, abort, redirect, render_template, request, session, url
 try:
     from . import incidents as incident_store
     from . import source_tickets
+    from . import device_reviews
     from .markdown_view import render_preview
 except ImportError:
     import incidents as incident_store
     import source_tickets
+    import device_reviews
     from markdown_view import render_preview
 
 app = Flask(__name__)
@@ -142,12 +144,26 @@ def get_summary():
     finally:
         conn.close()
 
-def filter_devices(devices, query, status, review):
+def filter_devices(devices, query, status, review, age="all", visibility="all"):
     """Narrow the displayed rows without changing the inventory database."""
     matches = []
     search = query.casefold()
     fields = ("ip", "mac", "hostname", "owner", "device_type")
     for device in devices:
+        device = dict(device)
+        if visibility == "active" and device.get("archived", False):
+            continue
+        if visibility == "archived" and not device.get("archived", False):
+            continue
+        days = device.get("age_days")
+        if age == "recent7" and (days is None or days >= 7):
+            continue
+        if age == "recent30" and (days is None or days >= 30):
+            continue
+        if age == "stale30" and (days is None or days < 30):
+            continue
+        if age == "stale90" and (days is None or days < 90):
+            continue
         if status != "all" and device["status"] != status:
             continue
         if review == "unreviewed" and device["is_known"] != 0:
@@ -282,7 +298,8 @@ def incident_page(incident_id, error="", submitted=None):
 # routes
 @app.route("/")
 def home():
-    all_devices = get_devices()
+    archive_records = device_reviews.records()
+    all_devices = [device_reviews.annotate(device, archive_records) for device in get_devices()]
     query = request.args.get("q", "").strip()
     status = request.args.get("status", "all")
     review = request.args.get("review", "all")
@@ -290,13 +307,21 @@ def home():
         status = "all"
     if review not in ("all", "known", "unreviewed"):
         review = "all"
-    devices = filter_devices(all_devices, query, status, review)
+    age = request.args.get("age", "all")
+    visibility = request.args.get("visibility", "active")
+    if age not in ("all", "recent7", "recent30", "stale30", "stale90"):
+        age = "all"
+    if visibility not in ("active", "all", "archived"):
+        visibility = "active"
+    devices = filter_devices(all_devices, query, status, review, age, visibility)
     return render_template(
         "devices.html",
         devices=devices,
         total=len(all_devices),
         online=sum(1 for d in all_devices if d["status"] == "online"),
-        unreviewed=sum(1 for d in all_devices if d["is_known"] == 0),
+        unreviewed=sum(1 for d in all_devices if d["is_known"] == 0 and not d["archived"]),
+        archived_count=sum(1 for d in all_devices if d["archived"]),
+        age_filter=age, visibility_filter=visibility,
         query=query,
         status_filter=status,
         review_filter=review,
@@ -307,6 +332,10 @@ def home():
 
 @app.route("/devices/<mac>")
 def host_detail(mac):
+    return host_page(mac)
+
+
+def host_page(mac, error="", reason=""):
     device, sightings = get_host_detail(mac)
     if device is None:
         abort(404)
@@ -315,9 +344,31 @@ def host_detail(mac):
         device=device,
         sightings=sightings,
         related_alerts=get_host_alerts(device),
+        review_device=device_reviews.annotate(device, device_reviews.records()),
+        error=error, archive_reason=reason, csrf_token=csrf_token(),
         window=ONLINE_WINDOW_MIN,
         active="devices",
     )
+
+
+@app.route("/devices/<mac>/archive", methods=["POST"])
+def archive_device(mac):
+    check_incident_form()
+    device, _ = get_host_detail(mac)
+    if device is None:
+        abort(404)
+    reason = request.form.get("reason", "").strip()
+    action = request.form.get("action", "archive")
+    try:
+        if action == "archive":
+            device_reviews.archive(device, reason)
+        elif action == "restore":
+            device_reviews.restore(device["mac"])
+        else:
+            raise ValueError("Choose archive or restore.")
+    except ValueError as error:
+        return host_page(mac, error=str(error), reason=reason), 400
+    return redirect(url_for("host_detail", mac=device["mac"]))
 
 
 @app.route("/alerts")

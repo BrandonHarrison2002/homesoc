@@ -5,7 +5,8 @@
   <div class="stats">
     <div class="stat"><div class="num">{{ total }}</div><div class="label">Total</div></div>
     <div class="stat"><div class="num online">{{ online }}</div><div class="label">Online ({{ window }}m)</div></div>
-    <div class="stat"><div class="num">{{ unreviewed }}</div><div class="label">Unreviewed</div></div>
+    <div class="stat"><div class="num">{{ unreviewed }}</div><div class="label">Unreviewed (active)</div></div>
+    <div class="stat"><div class="num">{{ archived_count }}</div><div class="label">Archived</div></div>
   </div>
 
   <form class="device-filters" method="get" action="{{ url_for('home') }}">
@@ -26,10 +27,24 @@
         <option value="unreviewed"{% if review_filter == 'unreviewed' %} selected{% endif %}>Unreviewed</option>
       </select>
     </label>
+    <label for="device-age">Last seen
+      <select id="device-age" name="age">
+        {% for value, label in [('all', 'Any time'), ('recent7', 'Within 7 days'), ('recent30', 'Within 30 days'), ('stale30', '30+ days ago'), ('stale90', '90+ days ago')] %}
+        <option value="{{ value }}"{% if age_filter == value %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label for="device-visibility">Inventory view
+      <select id="device-visibility" name="visibility">
+        {% for value, label in [('active', 'Exclude archived'), ('all', 'Include archived'), ('archived', 'Archived only')] %}
+        <option value="{{ value }}"{% if visibility_filter == value %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
     <button type="submit">Apply filters</button>
     <a href="{{ url_for('home') }}">Clear filters</a>
   </form>
-  <p class="muted">Showing {{ devices|length }} of {{ total }} devices. Inventory totals above include all devices.</p>
+  <p class="muted">Showing {{ devices|length }} of {{ total }} devices. Total and online counts include all devices; active unreviewed excludes archived entries. Archiving does not approve a device.</p>
 
   {% if devices %}
   <table>
@@ -45,7 +60,7 @@
         <td>{{ d['hostname'] }}</td>
         <td>{{ d['owner'] }}</td>
         <td>{{ d['device_type'] }}</td>
-        <td class="muted">{{ d['last_seen'] }}{% if d['is_known'] == 0 %} <span class="badge-new">NEW</span>{% endif %}</td>
+        <td class="muted">{{ d['last_seen'] }}{% if d['is_known'] == 0 %} <span class="badge-new">UNREVIEWED</span>{% endif %}{% if d['archived'] %} <span class="muted">ARCHIVED</span>{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>

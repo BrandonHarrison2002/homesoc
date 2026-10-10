@@ -19,6 +19,30 @@
       <tr><th scope="row">Last seen (UTC)</th><td>{{ device['last_seen'] }}</td></tr>
     </tbody>
   </table>
+  <h2>Review visibility</h2>
+  <p>Last seen: {{ review_device['age_days'] ~ ' days ago' if review_device['age_days'] is not none else 'unknown' }}.</p>
+  <p class="muted">Archive keeps this device and its sightings but hides it from the default inventory view. It does not approve the MAC, close alerts, or suppress detection. A changed discovery timestamp brings it back into active review.</p>
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+  {% if review_device['archive_record'] %}
+  <p class="host-notes">Archive reason: {{ review_device['archive_record']['reason'] }}</p>
+  <p class="muted">Archived {{ review_device['archive_record']['archived_at'] }} UTC{% if not review_device['archive_record']['is_archived'] %}; returned to active review manually.{% elif not review_device['archived'] %}; discovery has since seen this device again, so it is visible in active review.{% endif %}</p>
+  {% endif %}
+  {% if review_device['archived'] %}
+  <form method="post" action="{{ url_for('archive_device', mac=device['mac']) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="action" value="restore">
+    <button type="submit">Return to active review</button>
+  </form>
+  {% elif review_device['age_days'] is not none and review_device['age_days'] >= 30 and device['status'] != 'online' %}
+  <form class="incident-form" method="post" action="{{ url_for('archive_device', mac=device['mac']) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="action" value="archive">
+    <label>Archive reason (10 to 1,000 characters)<textarea name="reason" rows="3" maxlength="1000" required>{{ archive_reason }}</textarea></label>
+    <button type="submit">Archive stale device</button>
+  </form>
+  {% else %}
+  <p class="muted">Archiving is available after at least 30 days without a discovery sighting. Leave unidentified recent devices unreviewed.</p>
+  {% endif %}
   <h2>Inventory notes</h2>
   <p class="host-notes">{{ device['notes'] or 'No inventory notes recorded.' }}</p>
 
