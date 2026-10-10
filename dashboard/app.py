@@ -9,10 +9,15 @@ from flask import Flask, abort, redirect, render_template, request, session, url
 
 try:
     from . import incidents as incident_store
+    from . import source_tickets
+    from .markdown_view import render_preview
 except ImportError:
     import incidents as incident_store
+    import source_tickets
+    from markdown_view import render_preview
 
 app = Flask(__name__)
+app.jinja_env.filters["markdown_preview"] = render_preview
 app.secret_key = incident_store.get_session_key()
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict", MAX_CONTENT_LENGTH=32768)
 
@@ -87,7 +92,7 @@ def get_alerts():
             continue
         try:
             meta = parse_frontmatter(ticket.read_text())
-        except OSError:
+        except (OSError, UnicodeError):
             continue
         meta["filename"] = ticket.name
         alerts.append(meta)
@@ -456,6 +461,30 @@ def save_incident(incident_id):
         abort(404)
     except ValueError as error:
         return incident_page(incident_id, error=str(error), submitted=submitted), 400
+    return redirect(url_for("incident_detail", incident_id=incident_id))
+
+
+@app.route("/incidents/<int:incident_id>/resolve-source", methods=["POST"])
+def resolve_incident_source(incident_id):
+    check_incident_form()
+    incident, _ = incident_store.get_incident(incident_id)
+    if incident is None:
+        abort(404)
+    if incident["status"] != "Resolved":
+        return incident_page(incident_id, error="Save this incident as Resolved before closing its source alert."), 400
+    try:
+        changed = source_tickets.resolve_source(
+            ALERTS_DIR, incident["alert_filename"], incident_id, incident["resolution"])
+    except ValueError as error:
+        return incident_page(incident_id, error=str(error)), 400
+    except OSError:
+        return incident_page(incident_id, error="Source alert could not be updated. Check that it exists and that the dashboard user can write its directory."), 409
+    if changed:
+        try:
+            incident_store.add_incident_note(
+                incident_id, "Source alert resolved from the dashboard; saved resolution copied to its Markdown evidence.")
+        except sqlite3.Error:
+            return incident_page(incident_id, error="Source alert was resolved, but its timeline entry could not be saved. Record the closure after checking the incident database."), 500
     return redirect(url_for("incident_detail", incident_id=incident_id))
 
 

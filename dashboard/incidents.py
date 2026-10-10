@@ -130,3 +130,16 @@ def update_incident(incident_id, status, priority, owner, resolution, note):
             conn.commit()
     finally:
         conn.close()
+
+
+def add_incident_note(incident_id, body):
+    """Append audit text without overwriting incident fields from another edit."""
+    if not body.strip() or len(body) > 4000:
+        raise ValueError('A timeline note must contain 1 to 4,000 characters.')
+    conn = connect()
+    try:
+        conn.execute('INSERT INTO incident_notes(incident_id,body) VALUES(?,?)', (incident_id, body))
+        conn.execute("UPDATE incidents SET updated_at=datetime('now') WHERE id=?", (incident_id,))
+        conn.commit()
+    finally:
+        conn.close()

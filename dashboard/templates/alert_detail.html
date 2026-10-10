@@ -16,10 +16,14 @@
   </table>
   <p><a class="button" href="{{ url_for('create_incident', filename=filename) }}">Prepare / open incident</a></p>
   <p class="muted">For a new case, this opens an unsaved form. Only Save new incident creates the record. Existing cases open directly.</p>
-  <p class="muted">Incident workflow is separate from this source ticket. Resolving a case does not change detector status or deduplication.</p>
+  <p class="muted">Save a resolved incident, then use Resolve source alert on its incident page to close this detector ticket.</p>
   <h2>Source ticket and evidence</h2>
   {% if truncated %}<p class="empty">Preview limited to the first 131,072 characters. Read the source file for the full ticket.</p>{% endif %}
-  <pre class="log-lines">{{ text }}</pre>
+  <article class="markdown-preview">{{ text | markdown_preview(true) }}</article>
+  <details class="raw-source">
+    <summary>View raw source ticket and metadata</summary>
+    <pre class="log-lines">{{ text }}</pre>
+  </details>
 
   <h2>Linked response runbook</h2>
   {% if runbook_reference %}<p class="muted">{{ runbook_reference }}</p>{% endif %}
@@ -27,6 +31,10 @@
   <p class="empty">{{ runbook_error }}</p>
   {% else %}
   {% if runbook_truncated %}<p class="empty">Preview limited to the first 131,072 characters. Read the source file for the full runbook.</p>{% endif %}
-  <pre class="log-lines">{{ runbook_text }}</pre>
+  <article class="markdown-preview">{{ runbook_text | markdown_preview }}</article>
+  <details class="raw-source">
+    <summary>View raw runbook Markdown</summary>
+    <pre class="log-lines">{{ runbook_text }}</pre>
+  </details>
   {% endif %}
 {% endblock %}

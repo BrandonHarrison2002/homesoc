@@ -9,7 +9,7 @@
   {% else %}
   <p class="empty">Source ticket {{ incident['alert_filename'] }} is no longer available. The incident record is retained.</p>
   {% endif %}
-  <p class="muted">Resolving this case does not update source Markdown or detector deduplication. Follow the response runbook and update the source ticket manually when appropriate.</p>
+  <p class="muted">Save your incident resolution first. Then use Resolve source alert below to close the linked detector ticket with the saved resolution.</p>
   {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
   <form class="incident-form" method="post" action="{{ url_for('save_incident', incident_id=incident['id']) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -20,6 +20,22 @@
     <label>Add investigation note<textarea name="note" rows="4" maxlength="4000">{{ values.get('note', '') if values is mapping else '' }}</textarea></label>
     <button type="submit">Save changes</button>
   </form>
+  <h2>Source alert closure</h2>
+  {% if source and source.get('status') == 'open' and incident['status'] == 'Resolved' %}
+  <p>The incident is resolved, but its source alert is still open. Closing it allows future qualifying activity to create a new detector ticket.</p>
+  <p class="muted">This action uses your saved resolution. Unsaved edits above are not included.</p>
+  <form method="post" action="{{ url_for('resolve_incident_source', incident_id=incident['id']) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Resolve source alert</button>
+  </form>
+  {% elif source and source.get('status') == 'resolved' %}
+  <p class="status-resolved">Source alert is resolved.</p>
+  {% elif source and source.get('status') == 'open' %}
+  <p class="muted">Save the incident as Resolved with a resolution before closing its source alert.</p>
+  {% elif source %}
+  <p class="muted">This source status cannot be closed from the dashboard.</p>
+  {% endif %}
+  <p class="muted">For an approved device, also mark it known in inventory to prevent future unknown-device alerts. Reopening a case does not reopen its source ticket.</p>
   <h2>Investigation timeline</h2>
   {% for note in notes %}
   <p class="muted">{{ note['created_at'] }} UTC</p>

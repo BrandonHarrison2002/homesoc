@@ -5,7 +5,10 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-User=root
+User=brandon
+Group=brandon
+SupplementaryGroups=adm
+UMask=0027
 WorkingDirectory=/home/brandon/homesoc
 ExecStart=/usr/bin/python3 /home/brandon/homesoc/alerts/ssh_bruteforce_watcher.py
 Nice=10

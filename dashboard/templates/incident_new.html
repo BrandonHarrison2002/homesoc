@@ -4,7 +4,7 @@
 {% block content %}
   <p class="muted">Unsaved form: no case has been created. Cancel leaves your incident list unchanged.</p>
   <p><a class="device-link" href="{{ url_for('alert_detail', filename=filename) }}">Cancel / return to alert</a></p>
-  <p class="muted">Source ticket: {{ filename }}. Incident workflow does not change detector tickets.</p>
+  <p class="muted">Source ticket: {{ filename }}. After saving a resolved incident, you can close its source alert from the incident page.</p>
   <p class="muted">For a valid detection caused by authorized activity, explain that benign outcome in your resolution. Do not label it malicious solely because it triggered a rule.</p>
   {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
   <form class="incident-form" method="post" action="{{ url_for('create_incident', filename=filename) }}">

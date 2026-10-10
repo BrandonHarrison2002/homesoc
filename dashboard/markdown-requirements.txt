@@ -1,0 +1,2 @@
+# Additional dependency for formatted alert/runbook previews.
+markdown-it-py==4.0.0

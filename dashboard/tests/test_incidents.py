@@ -1,5 +1,6 @@
 """Synthetic integration checks; no live inventory, tickets or networks are used."""
 import importlib
+from contextlib import closing
 import os
 import sqlite3
 import tempfile
@@ -30,7 +31,7 @@ class IncidentTests(unittest.TestCase):
         self.module.app.secret_key = self.store.get_session_key()
         self.module.ALERTS_DIR = self.root/'alerts';self.module.ALERTS_DIR.mkdir()
         self.module.DB_PATH = self.root/'inventory.db'
-        with sqlite3.connect(self.module.DB_PATH) as db:
+        with closing(sqlite3.connect(self.module.DB_PATH)) as db:
             db.executescript((self.module.PROJECT_ROOT/'db/schema.sql').read_text())
         self.ticket = self.module.ALERTS_DIR/'sample.md'
         self.ticket.write_text('---\nstatus: open\nseverity: medium\ndetected_by: sample-test\n---\n# Synthetic alert\nSample evidence only.')
