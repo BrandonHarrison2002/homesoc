@@ -10,7 +10,7 @@ This is a learning and portfolio project. It is not meant to be an enterprise SO
 
 - **Network discovery** — `arp-scan` runs every 15 minutes using a systemd timer. It finds devices on the LAN and records their IP, MAC address, and vendor.
 - **Asset inventory** — devices are stored in SQLite and tracked by MAC address so they can still be recognized even if their IP changes.
-- **New device review** — new or unapproved devices are flagged for review instead of being ignored.
+- **New device review** — new or unapproved devices are flagged as UNREVIEWED. Last-seen filters separate recent devices from historical records. Devices unseen for at least 30 days can be archived with a reason and restored later; a new sighting returns them to active review without approving them.
 - **Self-registration** — the Pi identifies itself so it does not keep alerting on its own MAC address.
 - **Router log collection** — my Flint 2 router forwards syslog to the Pi over UDP. `rsyslog` writes the logs to a per-host log file, and `logrotate` handles retention.
 - **DHCP detection rule** — a watcher checks the router DHCP logs every 5 minutes. If a device that is not approved in the inventory gets an IP address, it writes an alert ticket in Markdown.
@@ -18,6 +18,9 @@ This is a learning and portfolio project. It is not meant to be an enterprise SO
 - **Daily summary tool** — a command-line report pulls from SQLite, the systemd journal, and router logs to show scan activity, current devices, stale devices, router activity, recent alerts, and Pi health.
 - **Flask dashboard** — a LAN web interface for searching and filtering devices, viewing host details and recent logs, reviewing alerts, and reading linked runbooks.
 - **Incident tracking** — alerts can become incidents with an owner, priority, status, investigation notes, resolution, and a history of changes. Incidents are created only when I save the form.
+- **Source alert closure** — after saving an incident as resolved, I can explicitly resolve its linked Markdown alert from the dashboard. The saved resolution is appended while the original evidence is preserved. Archiving a device does not close its alerts.
+- **Readable evidence** — alert evidence and linked runbooks render as formatted Markdown, with the raw source available for comparison.
+- **Verified backups** — a daily systemd timer backs up the inventory and incident databases, alert evidence, and selected project code/configuration. Each archive is checked through a temporary restore before it is kept. I have also copied verified archives to my Windows PC.
 - **SSH detection rule** — a watcher reads the Pi's authentication log every 5 minutes and creates a ticket when one source IP makes at least 5 invalid-user attempts within 10 minutes. Recent attempts are retained between runs.
 - **Splunk integration** — an Ubuntu Server VM in VirtualBox runs Splunk Enterprise. The Pi forwards authentication logs through HTTPS HTTP Event Collector (HEC), with certificate verification and a checkpoint for retries.
 - **Splunk detection search** — a scheduled search detects repeated invalid SSH usernames and records triggered alerts. I validated it with controlled SSH attempts from my own PC.
@@ -30,14 +33,14 @@ This is a learning and portfolio project. It is not meant to be an enterprise SO
 - Detection of failed authentication against existing user accounts
 - Additional rules, such as possible port scans
 - Additional runbooks for confirmed monitoring use cases
-- Backups for the database and important config files
 - Notifications outside the dashboard
 - Forwarding router logs and inventory events to Splunk
-- Authenticated dashboard access and coordinated incident/source-ticket closure
+- Authenticated dashboard access
+- Automated off-Pi backup copies and a full recovery exercise
 
 ## How it works
 
-The Raspberry Pi sits on my home network and runs four scheduled jobs:
+The Raspberry Pi sits on my home network and runs five scheduled jobs:
 
 1. **Discovery scan every 15 minutes**
    This actively scans the LAN with `arp-scan`, saves the results in SQLite, and flags new devices for review. Discovery warnings do not themselves create Markdown alert tickets.
@@ -51,18 +54,24 @@ The Raspberry Pi sits on my home network and runs four scheduled jobs:
 4. **Splunk authentication-log sender approximately every 2 minutes**
    This sends new authentication records to the Splunk VM over verified HTTPS. It keeps its checkpoint when sending fails and retries on later runs while the required logs remain available.
 
-The Flask dashboard presents inventory, recent logs, alert evidence, and linked runbooks. I can create an incident from an alert, document my investigation, and record a resolution.
+5. **Verified backup daily around 03:15**
+   This snapshots both SQLite databases, copies alert evidence and selected project files, and checks an extracted temporary copy. It retains the latest seven successful archives outside the repository. Windows copies are currently manual.
+
+The Flask dashboard presents inventory, recent logs, alert evidence, and linked runbooks. I can create an incident from an alert, document my investigation, save a resolution, and then explicitly close the source alert. Saving an incident alone does not close its source ticket.
+
+Stale-device archiving keeps historical records available while removing them from the default inventory view. It does not approve a device, delete evidence, or suppress detection alerts.
 
 When a new device is detected, I follow RB-001. I check the router admin page, look up the MAC vendor, compare scans with router logs, decide whether the device is mine, and update the inventory and documentation. For SSH detections, I use RB-003 to review the source and activity before deciding whether action is needed.
 
 Splunk provides a separate place to search authentication events and run a scheduled detection. Its triggered alerts do not automatically create HomeSOC incidents.
 
-See [Splunk integration and validation](docs/splunk-integration.md) for the setup, detection search, controlled tests, and known limitations.
+See [Splunk integration and validation](docs/splunk-integration.md), [source alert closure](docs/source-alert-closure.md), [device review](docs/device-review.md), and [backups and restore verification](docs/backups-and-restore.md) for the workflows and their limits.
 
 ## Current limitations
 
 - The dashboard is intended for my private LAN and does not currently have authenticated user accounts.
-- Resolving a dashboard incident does not change its source Markdown ticket. I currently resolve both manually.
+- Incident resolution and source alert closure are separate explicit actions. An archived or offline device is not automatically considered investigated or safe.
+- Backups are compressed, not encrypted, and exclude credentials, private keys, processing checkpoints, and raw system logs. They are not full Pi or Splunk VM backups. Temporary restore verification is working; a full rebuild has not yet been tested. Windows backup copies are manual.
 - The SSH rule detects invalid usernames; it does not yet cover failed authentication for existing accounts.
 - Splunk displayed a warning that the scheduled search will not run after the Enterprise trial expires. The Pi's local detectors run independently of Splunk.
 - The sender has no separate event spool. If the VM is off long enough for unread logs to be deleted, those events cannot be recovered. The local SSH watcher also does not recover unread entries from rotated logs.
@@ -123,6 +132,7 @@ homesoc-dhcpack.timer    homesoc-dhcpack.service
 homesoc-discovery.timer  homesoc-discovery.service
 homesoc-sshbrute.timer   homesoc-sshbrute.service
 homesoc-auth-splunk.timer homesoc-auth-splunk.service
+homesoc-backup.timer     homesoc-backup.service
 ```
 
 ## Hardware
@@ -160,6 +170,8 @@ homesoc-auth-splunk.timer homesoc-auth-splunk.service
 | `siem/forward_auth.py` | HTTPS authentication-log sender |
 | `siem/tests/` | Sender regression tests |
 | `scripts/daily-summary.py` | Daily status report |
+| `scripts/backup_homesoc.py` | Private backups and temporary restore verification |
+| `scripts/tests/` | Backup regression tests |
 | `db/schema.sql` | SQLite database schema |
 | `collectors/` | rsyslog and logrotate configs |
 | `systemd/` | Service and timer files |
@@ -170,6 +182,9 @@ homesoc-auth-splunk.timer homesoc-auth-splunk.service
 | `evidence/` | Alert tickets and project evidence |
 | `dashboard/` | Flask dashboard, templates, incident handling, and tests |
 | `docs/splunk-integration.md` | Splunk setup, searches, validation, and limitations |
+| `docs/source-alert-closure.md` | Explicit incident/source alert closure workflow |
+| `docs/device-review.md` | Stale filters and reversible device archiving |
+| `docs/backups-and-restore.md` | Backup scope, retention, verification, and recovery |
 
 ## Network
 
