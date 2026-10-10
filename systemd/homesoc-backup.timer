@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily verified HomeSOC backup
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=5min
+Unit=homesoc-backup.service
+
+[Install]
+WantedBy=timers.target

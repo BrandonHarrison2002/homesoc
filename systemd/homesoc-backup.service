@@ -1,0 +1,13 @@
+[Unit]
+Description=HomeSOC private backup and temporary restore verification
+
+[Service]
+Type=oneshot
+User=brandon
+Group=brandon
+WorkingDirectory=/home/brandon/homesoc
+ExecStart=/usr/bin/python3 /home/brandon/homesoc/scripts/backup_homesoc.py --output-dir /home/brandon/homesoc-backups --keep 7
+UMask=0077
+TimeoutStartSec=10min
+Nice=10
+NoNewPrivileges=true
