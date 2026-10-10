@@ -10,11 +10,13 @@ from flask import Flask, abort, redirect, render_template, request, session, url
 try:
     from . import incidents as incident_store
     from . import source_tickets
+    from . import service_health
     from . import device_reviews
     from .markdown_view import render_preview
 except ImportError:
     import incidents as incident_store
     import source_tickets
+    import service_health
     import device_reviews
     from markdown_view import render_preview
 
@@ -585,6 +587,11 @@ def resolve_incident_source(incident_id):
         except sqlite3.Error:
             return incident_page(incident_id, error="Source alert was resolved, but its timeline entry could not be saved. Record the closure after checking the incident database."), 500
     return redirect(url_for("incident_detail", incident_id=incident_id))
+
+
+@app.route("/health")
+def health():
+    return render_template("health.html", health=service_health.snapshot(), active="health")
 
 
 @app.route("/summary")

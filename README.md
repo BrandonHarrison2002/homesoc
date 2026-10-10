@@ -16,7 +16,8 @@ This is a learning and portfolio project. It is not meant to be an enterprise SO
 - **DHCP detection rule** — a watcher checks the router DHCP logs every 5 minutes. If a device that is not approved in the inventory gets an IP address, it writes an alert ticket in Markdown.
 - **Alert deduplication** — an existing open source ticket prevents repeat tickets for the same device or SSH source IP.
 - **Daily summary tool** — a command-line report pulls from SQLite, the systemd journal, and router logs to show scan activity, current devices, stale devices, router activity, recent alerts, and Pi health.
-- **Flask dashboard** — a LAN web interface for searching and filtering devices, viewing host details and recent logs, reviewing alerts, and reading linked runbooks.
+- **Flask dashboard** — a LAN web interface for searching and filtering devices, viewing host details and recent logs, reviewing alerts, reading linked runbooks, and editing inventory metadata or approving identified devices from their host pages.
+- **Service health** — a read-only dashboard page shows systemd timer status, recent service starts/completions, results, and warnings for the discovery, DHCP, SSH, Splunk sender, and backup jobs.
 - **Incident tracking** — alerts can become incidents with an owner, priority, status, investigation notes, resolution, and a history of changes. Incidents are created only when I save the form.
 - **Source alert closure** — after saving an incident as resolved, I can explicitly resolve its linked Markdown alert from the dashboard. The saved resolution is appended while the original evidence is preserved. Archiving a device does not close its alerts.
 - **Readable evidence** — alert evidence and linked runbooks render as formatted Markdown, with the raw source available for comparison.
@@ -185,6 +186,8 @@ homesoc-backup.timer     homesoc-backup.service
 | `docs/source-alert-closure.md` | Explicit incident/source alert closure workflow |
 | `docs/device-review.md` | Stale filters and reversible device archiving |
 | `docs/backups-and-restore.md` | Backup scope, retention, verification, and recovery |
+| `docs/service-health.md` | Job health status rules and diagnostic commands |
+| `docs/inventory-edit.md` | Explicit inventory edits and device approval |
 
 ## Network
 

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Service Health{% endblock %}
+{% block heading %}Service Health{% endblock %}
+{% block content %}
+  <p>Checked {{ health.checked_at }}. <a class="button" href="{{ url_for('health') }}">Refresh status</a></p>
+  <p class="muted">Live systemd status from this Pi. Refresh to update; this page does not control services or create alert tickets.</p>
+  {% if health.error %}<p class="form-error" role="alert">{{ health.error }}</p>{% endif %}
+  <div class="stats">
+    <div class="stat"><div class="num health-healthy">{{ health.healthy }}</div><div class="label">Healthy</div></div>
+    <div class="stat"><div class="num health-warning">{{ health.attention }}</div><div class="label">Need attention</div></div>
+    <div class="stat"><div class="num health-unknown">{{ health.unknown }}</div><div class="label">Unknown</div></div>
+  </div>
+  <div class="health-table"><table>
+    <thead><tr><th>Job</th><th>Health</th><th>Timer / startup</th><th>Last start (UTC)</th><th>Last finish (UTC)</th><th>Result / exit</th><th>Next trigger (UTC)</th></tr></thead>
+    <tbody>{% for job in health.rows %}<tr>
+      <td><a class="device-link" href="#{{ job.base }}">{{ job.label }}</a></td>
+      <td class="health-{{ job.tone }}">{{ job.status }}</td>
+      <td>{{ job.timer_state }} / {{ job.enabled }}</td>
+      <td>{{ job.last_start }}</td><td>{{ job.last_finish }}</td>
+      <td>{{ job.result }} / {{ job.exit_code }}</td><td>{{ job.next_run }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="muted">An inactive oneshot service is normal after completion. Success with zero new events is also normal. Healthy means a recent successful process run and an active, enabled timer; it does not prove complete log ingestion or detector coverage.</p>
+  {% for job in health.rows %}
+  <section class="health-card" id="{{ job.base }}">
+    <h2>{{ job.label }} — <span class="health-{{ job.tone }}">{{ job.status }}</span></h2>
+    <p>{{ job.schedule }}. Warning threshold: {{ job.threshold_minutes }} minutes without a successful completion. Service state: {{ job.service_state }}.</p>
+    <p class="muted">Last timer trigger: {{ job.last_trigger }}. Next trigger may be unavailable while a job runs or when the timer is inactive.</p>
+    {% if job.issues %}<ul>{% for issue in job.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
+    <details><summary>Inspect on the Pi</summary><pre class="log-lines">systemctl status {{ job.base }}.timer {{ job.base }}.service --no-pager
+sudo journalctl -u {{ job.base }}.service -n 20 --no-pager</pre></details>
+  </section>
+  {% endfor %}
+  <p class="muted">Systemd history may reset after reboot or unit unloading. Waiting or unknown status is shown when a completed run cannot be confirmed. No sample data is substituted. The Splunk row checks the Pi sender, not the VM or Splunk search/license status. Backup success does not verify a Windows copy.</p>
+{% endblock %}
