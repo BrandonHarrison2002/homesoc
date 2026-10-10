@@ -16,8 +16,9 @@ This is a learning and portfolio project. It is not meant to be an enterprise SO
 - **DHCP detection rule** — a watcher checks the router DHCP logs every 5 minutes. If a device that is not approved in the inventory gets an IP address, it writes an alert ticket in Markdown.
 - **Alert deduplication** — an existing open source ticket prevents repeat tickets for the same device or SSH source IP.
 - **Daily summary tool** — a command-line report pulls from SQLite, the systemd journal, and router logs to show scan activity, current devices, stale devices, router activity, recent alerts, and Pi health.
-- **Flask dashboard** — a LAN web interface for searching and filtering devices, viewing host details and recent logs, reviewing alerts, reading linked runbooks, and editing inventory metadata or approving identified devices from their host pages.
+- **Flask dashboard** — a private web interface accessed through an SSH tunnel for searching and filtering devices, viewing host details and recent logs, reviewing alerts, reading linked runbooks, and editing inventory metadata or approving identified devices from their host pages.
 - **Service health** — a read-only dashboard page shows systemd timer status, recent service starts/completions, results, and warnings for the discovery, DHCP, SSH, Splunk sender, and backup jobs.
+- **Dashboard login** — a single-user login protects all dashboard pages and actions. Credentials are stored as a private password hash, sessions expire after eight hours, and password resets invalidate previous sessions. The dashboard binds to loopback; SSH carries browser traffic between my PC and the Pi.
 - **Incident tracking** — alerts can become incidents with an owner, priority, status, investigation notes, resolution, and a history of changes. Incidents are created only when I save the form.
 - **Source alert closure** — after saving an incident as resolved, I can explicitly resolve its linked Markdown alert from the dashboard. The saved resolution is appended while the original evidence is preserved. Archiving a device does not close its alerts.
 - **Readable evidence** — alert evidence and linked runbooks render as formatted Markdown, with the raw source available for comparison.
@@ -36,7 +37,7 @@ This is a learning and portfolio project. It is not meant to be an enterprise SO
 - Additional runbooks for confirmed monitoring use cases
 - Notifications outside the dashboard
 - Forwarding router logs and inventory events to Splunk
-- Authenticated dashboard access
+- HTTPS access through a private reverse proxy
 - Automated off-Pi backup copies and a full recovery exercise
 
 ## How it works
@@ -70,7 +71,7 @@ See [Splunk integration and validation](docs/splunk-integration.md), [source ale
 
 ## Current limitations
 
-- The dashboard is intended for my private LAN and does not currently have authenticated user accounts.
+- The dashboard has one local account, without roles or multi-user permissions. Access uses an SSH tunnel; the former direct LAN URL is no longer the dashboard entry point. Login throttling is process-local and resets when the dashboard restarts.
 - Incident resolution and source alert closure are separate explicit actions. An archived or offline device is not automatically considered investigated or safe.
 - Backups are compressed, not encrypted, and exclude credentials, private keys, processing checkpoints, and raw system logs. They are not full Pi or Splunk VM backups. Temporary restore verification is working; a full rebuild has not yet been tested. Windows backup copies are manual.
 - The SSH rule detects invalid usernames; it does not yet cover failed authentication for existing accounts.
@@ -188,6 +189,7 @@ homesoc-backup.timer     homesoc-backup.service
 | `docs/backups-and-restore.md` | Backup scope, retention, verification, and recovery |
 | `docs/service-health.md` | Job health status rules and diagnostic commands |
 | `docs/inventory-edit.md` | Explicit inventory edits and device approval |
+| `docs/dashboard-login.md` | Login setup, SSH tunnel access, password reset, and limits |
 
 ## Network
 

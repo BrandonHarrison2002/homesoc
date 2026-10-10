@@ -1,5 +1,5 @@
 [Unit]
-Description=HomeSOC dashboard (Flask, read-only LAN web UI)
+Description=HomeSOC dashboard (Flask, private authenticated web UI)
 Documentation=https://github.com/BrandonHarrison2002/homesoc
 After=network-online.target
 Wants=network-online.target

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block heading %}Sign in{% endblock %}
+{% block content %}
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+{% if setup_required %}
+<p>Set or reset dashboard credentials in the Pi SSH terminal, then reload this page.</p>
+<pre class="log-lines">cd ~/homesoc
+.venv/bin/python dashboard/auth.py set-password --username brandon</pre>
+{% else %}
+<p>Sign in to view inventory, logs, alerts, and incidents. Sessions expire after eight hours.</p>
+<form class="incident-form" method="post" action="{{ url_for('login') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="next" value="{{ next_url }}">
+  <label>Username<input name="username" maxlength="64" autocomplete="username" required autofocus></label>
+  <label>Password<input name="password" type="password" maxlength="128" autocomplete="current-password" required></label>
+  <button type="submit">Sign in</button>
+</form>
+{% endif %}
+{% endblock %}

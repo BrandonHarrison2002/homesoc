@@ -77,6 +77,12 @@
 <body>
   <h1>HomeSOC — {% block heading %}{% endblock %}</h1>
 
+  {% if dashboard_user %}
+  <p class="muted">Signed in as {{ dashboard_user }}.</p>
+    <form method="post" action="{{ url_for('logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ logout_token }}">
+      <button type="submit">Log out</button>
+    </form>
   <nav>
     <a href="/"{% if active == 'devices' %} class="active"{% endif %}>Devices</a>
     <a href="/alerts"{% if active == 'alerts' %} class="active"{% endif %}>Alerts</a>
@@ -85,6 +91,8 @@
     <a href="/health"{% if active == 'health' %} class="active"{% endif %}>Service Health</a>
     <a href="/summary"{% if active == 'summary' %} class="active"{% endif %}>Summary</a>
   </nav>
+
+  {% endif %}
 
   {% block content %}{% endblock %}
 </body>

@@ -4,6 +4,7 @@ from contextlib import closing
 import os
 import sqlite3
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -37,6 +38,13 @@ class IncidentTests(unittest.TestCase):
         self.ticket.write_text('---\nstatus: open\nseverity: medium\ndetected_by: sample-test\n---\n# Synthetic alert\nSample evidence only.')
         self.client = self.module.app.test_client()
         self.module.app.config['TESTING'] = True
+        credentials = dict(username='fixture', password_hash='pbkdf2:sha256:600000$ABCDEFGHIJKLMNOP$' + 'a'*64, version='a'*64)
+        (self.store.STATE_DIR / 'auth.json').write_text(__import__('json').dumps(credentials))
+        (self.store.STATE_DIR / 'auth.json').chmod(0o600)
+        self.module.login_throttle = self.module.dashboard_auth.LoginThrottle()
+        with self.client.session_transaction() as session:
+            session.update(auth_user='fixture', auth_version=credentials['version'], auth_issued_at=time.time())
+            session.permanent = True
         self.client.get('/alerts/sample.md')
         with self.client.session_transaction() as session:
             self.token = session['csrf_token']

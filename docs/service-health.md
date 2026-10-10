@@ -27,6 +27,6 @@ The backend runs one `systemctl show` command for fixed units and selected prope
 
 Systemd properties are not a durable run history and can reset after reboot or unit unloading. Thresholds assume the currently documented schedules; update them if schedules change. Healthy is process-level evidence, not proof of complete collection, correct detection, a reachable Splunk VM right now, valid Splunk licensing, or an off-Pi backup copy. Successful backup verification does not prove a complete machine rebuild. This page creates no health tickets or external notifications.
 
-Tests use synthetic properties and temporary dashboard data. A live Pi/browser check is still required after installation. The dashboard remains private LAN only and this feature adds no authentication or service-control permission.
+Tests use synthetic properties and temporary dashboard data. A live Pi/browser check is still required after installation. The health page follows the dashboard login gate and is accessed through its SSH tunnel. It adds no service-control permission. See [dashboard login](dashboard-login.md).
 
 Systemd reference: https://manpages.debian.org/bookworm/systemd/systemctl.1.en.html

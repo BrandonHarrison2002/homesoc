@@ -3,19 +3,24 @@
 
 import sqlite3
 import secrets
+import time
+from datetime import timedelta
+from urllib.parse import urlsplit
 from pathlib import Path
 
-from flask import Flask, abort, redirect, render_template, request, session, url_for
+from flask import Flask, abort, g, redirect, render_template, request, session, url_for
 
 try:
     from . import incidents as incident_store
     from . import source_tickets
+    from . import auth as dashboard_auth
     from . import service_health
     from . import device_reviews
     from .markdown_view import render_preview
 except ImportError:
     import incidents as incident_store
     import source_tickets
+    import auth as dashboard_auth
     import service_health
     import device_reviews
     from markdown_view import render_preview
@@ -23,7 +28,11 @@ except ImportError:
 app = Flask(__name__)
 app.jinja_env.filters["markdown_preview"] = render_preview
 app.secret_key = incident_store.get_session_key()
-app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict", MAX_CONTENT_LENGTH=32768)
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict", MAX_CONTENT_LENGTH=32768,
+                  SESSION_COOKIE_NAME="homesoc_session",
+                  PERMANENT_SESSION_LIFETIME=timedelta(seconds=dashboard_auth.SESSION_SECONDS),
+                  SESSION_REFRESH_EACH_REQUEST=False)
+login_throttle = dashboard_auth.LoginThrottle()
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "db" / "homesoc.db"
@@ -37,6 +46,77 @@ MARKDOWN_LIMIT = 131072
 
 # anything last seen within this window is considered "online"
 ONLINE_WINDOW_MIN = 30
+
+def safe_login_target(value):
+    if not value or not value.startswith("/") or value.startswith("//") or "\\" in value or any(ord(char) < 32 for char in value):
+        return url_for("home")
+    parsed = urlsplit(value)
+    return value if not parsed.netloc and not parsed.scheme else url_for("home")
+
+
+@app.before_request
+def require_login():
+    g.dashboard_user = None
+    try:
+        g.credentials = dashboard_auth.read_credentials()
+    except dashboard_auth.AuthConfigError:
+        session.clear()
+        return render_template("login.html", setup_required=True, error="Dashboard login needs setup or credential-file repair on the Pi.", csrf_token=csrf_token(), next_url="/"), 503
+    if dashboard_auth.valid_session(session, g.credentials):
+        g.dashboard_user = session["auth_user"]
+    elif "auth_user" in session:
+        session.clear()
+    if request.endpoint in ("login", "logout"):
+        return None
+    if g.dashboard_user is None:
+        if request.method not in ("GET", "HEAD"):
+            abort(403, description="Sign in before changing HomeSOC data.")
+        return redirect(url_for("login", next=request.full_path.rstrip("?")))
+
+
+@app.context_processor
+def login_context():
+    return dict(dashboard_user=getattr(g, "dashboard_user", None), logout_token=csrf_token() if getattr(g, "dashboard_user", None) else "")
+
+
+@app.after_request
+def private_responses(response):
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "same-origin"
+    return response
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    target = safe_login_target(request.form.get("next", request.args.get("next", "/")))
+    if g.dashboard_user:
+        return redirect(target)
+    error = ""
+    status = 200
+    if request.method == "POST":
+        check_incident_form()
+        if login_throttle.blocked():
+            error, status = "Too many failed login attempts. Wait 10 minutes before retrying.", 429
+        elif dashboard_auth.verify(g.credentials, request.form.get("username", ""), request.form.get("password", "")):
+            session.clear()
+            session.permanent = True
+            session.update(auth_user=g.credentials["username"], auth_version=g.credentials["version"], auth_issued_at=time.time())
+            csrf_token()
+            return redirect(target)
+        else:
+            login_throttle.failed()
+            error, status = "Invalid username or password.", 401
+    return render_template("login.html", error=error, next_url=target, csrf_token=csrf_token(), setup_required=False), status
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    check_incident_form()
+    session.clear()
+    return redirect(url_for("login"))
+
 
 # data access
 def get_devices():
@@ -603,4 +683,4 @@ if __name__ == "__main__":
     import os
     # Debug mode only when explicitly requested (never under systemd).
     debug = os.environ.get("HOMESOC_DEBUG") == "1"
-    app.run(host="0.0.0.0", port=8080, debug=debug)
+    app.run(host="127.0.0.1", port=8080, debug=debug)
